@@ -2,8 +2,8 @@
 % Please edit documentation in R/survival_adapt.R
 \name{survival_adapt}
 \alias{survival_adapt}
-\title{Simulate a single adaptive clinical trial with a time-to-event
-endpoint}
+\title{Simulate and execute a single adaptive clinical trial design with a
+time-to-event endpoint}
 \usage{
 survival_adapt(
   hazard_treatment,
@@ -26,12 +26,12 @@ survival_adapt(
   N_impute = 10,
   N_mcmc = 10,
   method = "logrank",
-  imputed_final = FALSE,
-  debug = FALSE
+  imputed_final = FALSE
 )
 }
 \arguments{
-\item{hazard_treatment}{vector. Constant hazard rates under the treatment arm.}
+\item{hazard_treatment}{vector. Constant hazard rates under the treatment
+arm.}
 
 \item{hazard_control}{vector. Constant hazard rates under the control arm.}
 
@@ -45,8 +45,8 @@ exponential model.}
 \code{\link{enrollment}} for more details.}
 
 \item{lambda_time}{vector. Enrollment time(s) at which the enrollment rates
-change. Must be same length as lambda. See
-\code{\link{enrollment}} for more details.}
+change. Must be same length as lambda. See \code{\link{enrollment}} for
+more details.}
 
 \item{interim_look}{vector. Sample size for each interim look. Note: the
 maximum sample size should not be included.}
@@ -66,8 +66,8 @@ distribution used is Gamma(0.1, 0.1), which is specified by setting
 to treatment. Integer values mapping the size of the block. See
 \code{\link{randomization}} for more details.}
 
-\item{prop_loss}{scalar. Overall proportion of subjects lost to
-follow-up. Defaults to zero.}
+\item{prop_loss}{scalar. Overall proportion of subjects lost to follow-up.
+Defaults to zero.}
 
 \item{alternative}{character. The string specifying the alternative
 hypothesis, must be one of \code{"greater"} (default), \code{"less"} or
@@ -103,60 +103,57 @@ distribution when using a Bayesian test (\code{method = "bayes"}).}
 \item{method}{character. For an imputed data set (or the final data set after
 follow-up is complete), whether the analysis should be a log-rank
 (\code{method = "logrank"}) test, Cox proportional hazards regression model
-Wald test (\code{method = "cox"}), or a fully-Bayesian analysis
-(\code{method = "bayes"}). See Details section.}
+Wald test (\code{method = "cox"}), a fully-Bayesian analysis (\code{method
+  = "bayes"}), or a chi-square test (\code{method = "chisq"}). See Details
+section.}
 
 \item{imputed_final}{logical. Should the final analysis (after all subjects
 have been followed-up to the study end) be based on imputed outcomes for
 subjects who were LTFU (i.e. right-censored with time
 \code{<end_of_study})? Default is \code{TRUE}. Setting to \code{FALSE}
 means that the final analysis would incorporate right-censoring.}
-
-\item{debug}{logical. If \code{TRUE} can be used to debug aspects of the
-code, including producing Kaplan-Meier graphs at each step of the
-algorithm. Default is \code{debug = FALSE}.}
 }
 \value{
 A data frame containing some input parameters (arguments) as well as
 statistics from the analysis, including:
 
 \describe{
-\item{\code{N_treatment}}{
+\item{\code{N_treatment:}}{
 integer. The number of patients enrolled in the treatment arm for
 each simulation.}
-\item{\code{N_control}}{
+\item{\code{N_control:}}{
 integer. The number of patients enrolled in the control arm for
 each simulation.}
-\item{\code{est_interim}}{
+\item{\code{est_interim:}}{
 scalar. The treatment effect that was estimated at the time of the
 interim analysis. Note this is not actually used in the final
 analysis.}
-\item{\code{est_final}}{
+\item{\code{est_final:}}{
 scalar. The treatment effect that was estimated at the final analysis.
 Final analysis occurs when either the maximum sample size is reached
 and follow-up complete, or the interim analysis triggered an early
 stopping of enrollment/accrual and follow-up for those subjects is
 complete.}
-\item{\code{post_prob_ha}}{
+\item{\code{post_prob_ha:}}{
 scalar. The corresponding posterior probability from the final
 analysis. If \code{imputed_final} is true, this is calculated as the
 posterior probability of efficacy (or equivalent, depending on how
-\code{alternative} and \code{h0} were specified) for each imputed
+\code{alternative:} and \code{h0} were specified) for each imputed
 final analysis dataset, and then averaged over the \code{N_impute}
 imputations. If \code{method = "logrank"}, \code{post_prob_ha} is
 calculated in the same fashion, but value represents \eqn{1 - P},
 where \eqn{P} denotes the frequentist \eqn{P}-value.}
-\item{\code{stop_futility}}{
+\item{\code{stop_futility:}}{
 integer. A logical indicator of whether the trial was stopped early for
 futility.}
-\item{\code{stop_expected_success}}{
+\item{\code{stop_expected_success:}}{
 integer. A logical indicator of whether the trial was stopped early for
 expected success.}
 }
 }
 \description{
-Simulate a single adaptive clinical trial with a time-to-event
-endpoint
+Simulate and execute a single adaptive clinical trial design with a
+time-to-event endpoint
 }
 \details{
 Implements the Goldilocks design method described in Broglio et al.
@@ -218,6 +215,17 @@ independent posteriors are used to estimate the posterior distribution
 of the difference. A posterior probability is calculated according to
 the specification of the test type (\code{alternative}) and the value of
 the null hypothesis (\code{h0}).
+\item Chi-square test (\code{method = "chisq"}).
+Each (imputed) dataset with both treatment and control arms can be
+compared using a standard chi-square test on the final event status,
+which discards the event time information. The output is a
+\emph{P}-value, and there is no treatment effect reported. The function
+returns \eqn{1 - P}, which is reported in \code{post_prob_ha}. Whilst
+not a posterior probability, it can be contrasted in the same manner.
+For example, if the success threshold is \eqn{P < 0.05}, then one
+requires \code{post_prob_ha} \eqn{> 0.95}. The reason for this is to
+enable simple switching between Bayesian and frequentist paradigms for
+analysis.
 \item Imputed final analysis (\code{imputed_final}).
 The overall final analysis conducted after accrual is suspended and
 follow-up is complete can be analyzed on imputed datasets (default) or

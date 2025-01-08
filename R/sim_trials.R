@@ -5,6 +5,7 @@
 #'   and tidily extract the relevant data to generate operating characteristics.
 #'
 #' @inheritParams survival_adapt
+#' @inheritParams sim_comp_data
 #' @param N_trials integer. Number of trials to simulate.
 #' @param ncores integer. Number of cores to use for parallel processing.
 #'
@@ -50,8 +51,8 @@
 #'   prob_ha = 0.975,
 #'   N_impute = 5,
 #'   N_mcmc = 5,
-#'   N_trials = 2,
 #'   method = "logrank",
+#'   N_trials = 2,
 #'   ncores = 1)
 
 sim_trials <- function(
@@ -84,7 +85,7 @@ sim_trials <- function(
 
   # Check: missing 'ncores' defaults to maximum available (spare 1)
   if (missing(ncores)) {
-    ncores <- min(1, parallel::detectCores() - 1)
+    ncores <- max(1, parallel::detectCores() - 1)
   }
 
   # Check: cannot specify <1 core
@@ -120,8 +121,7 @@ sim_trials <- function(
       N_impute         = N_impute,
       N_mcmc           = N_mcmc,
       method           = method,
-      imputed_final    = imputed_final,
-      debug            = FALSE)
+      imputed_final    = imputed_final)
   }
 
   sims <- pbmclapply(1:N_trials, survival_adapt_wrapper, mc.cores = ncores)

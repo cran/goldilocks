@@ -1,8 +1,9 @@
 #' @title Perform the final analysis test/method on the complete data
 #'
 #' @inheritParams survival_adapt
+#' @inheritParams sim_comp_data
 #' @inheritParams haz_to_prop
-#' @param data data frame. The time-to-event analysis data to be analyzed per
+#' @param data data frame. The (time-to-event) analysis data to be analyzed per
 #'   the pre-specified analysis method. Generally this will be an imputed data
 #'   set, and the analysis will be looped over multiple imputed datasets.
 #'
@@ -11,14 +12,14 @@
 #' \describe{
 #'     \item{\code{success}}{
 #'        The mean posterior probability of effect (or 1 - the conventional
-#'        P-value if \code{method = "logrank"} or \code{method = "cox"}).}
+#'        P-value if \code{method = "logrank"}, \code{method = "cox"}, or
+#'        \code{method = "chisq"}).}
 #'     \item{\code{effect}}{ A sample vector from the posterior distribution of
-#'        the effect size. If \code{method = "logrank"} or
-#'        \code{method = "cox"}, then this is \code{NULL}.}
+#'        the effect size. If \code{method = "logrank"}, then this is
+#'        \code{NULL}.}
 #' }
 #'
 #' @importFrom stats pchisq
-#' @importFrom fastlogranktest logrank_test
 #' @import survival
 #'
 #' @noRd
@@ -70,7 +71,7 @@ analyse_data <- function(
     t1 <- data$time[data$treatment == 1]
     e0 <- data$event[data$treatment == 0]
     e1 <- data$event[data$treatment == 1]
-    p  <- fastlogranktest::logrank_test(t0, t1, e0, e1)[3]
+    p  <- logrank_test(t0, t1, e0, e1)[3]
     # lrt <- survdiff(Surv(time, event) ~ treatment, data = data)
     # p <- pchisq(lrt$chisq, 1, lower.tail = FALSE)
     success <- 1 - p
@@ -86,6 +87,19 @@ analyse_data <- function(
     fit_res <- coef(summary(fit_cox))
     success <- 1 - fit_res[5]
     effect <- fit_res[1]
+  }
+
+  ####################################################
+  ### Chi-square test
+  ####################################################
+
+  # Assumes all LTFU subjects have been imputed
+
+  if (method == "chisq") {
+    mat <- with(data, table(event, treatment))
+    fit_cs <- chisq.test(mat, correct = FALSE)
+    success <- 1 - fit_cs$p.val
+    effect <- fit_cs$statistic
   }
 
   return(list(
