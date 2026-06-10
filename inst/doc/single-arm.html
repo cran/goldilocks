@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Single-arm trials</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Single-arm trials</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
+<p>The other vignettes describe two-arm randomised designs. Single-arm
+trials – in which every subject receives the experimental therapy and
+the comparator is an external benchmark – are common in early-phase
+oncology, rare-disease, and proof-of-concept studies. This vignette
+shows how to set up a Goldilocks single-arm design with
+<code>survival_adapt()</code>.</p>
+<p>Two practical constraints on single-arm designs in this package:</p>
+<ul>
+<li>A single-arm trial is signalled by setting
+<code>hazard_control = NULL</code>.</li>
+<li>Only <code>method = &quot;bayes&quot;</code> is supported for single-arm
+trials. The frequentist tests (<code>logrank</code>, <code>cox</code>,
+<code>chisq</code>) require two arms and will raise an error if used in
+this mode.</li>
+</ul>
+<div id="the-decision-rule" class="section level2">
+<h2>The decision rule</h2>
+<p>In a single-arm trial there is no concurrent control, so the
+“treatment effect” is replaced by the cumulative event probability on
+the treatment arm itself:</p>
+<p><span class="math inline">\(\text{effect} \;=\; p_{\text{treatment}}
+\;=\; \Pr(\text{event by end\_of\_study} \mid \text{data}).\)</span></p>
+<p>The argument <code>h0</code> plays the role of a benchmark on this
+scale: a target failure probability (or, equivalently, <span class="math inline">\(1 - h_0\)</span> is a target survival probability)
+drawn from external evidence such as a published rate, registry, or
+historical cohort. With <code>alternative = &quot;less&quot;</code> and
+<code>prob_ha</code>, the trial declares success when</p>
+<p><span class="math display">\[\Pr(p_{\text{treatment}} &lt; h_0 \mid
+\text{data}) \;&gt;\; \texttt{prob\_ha},\]</span></p>
+<p>i.e. when the posterior assigns enough mass to “the experimental
+therapy has a lower failure rate than the benchmark”. Choosing
+<code>alternative = &quot;greater&quot;</code> reverses the direction;
+<code>alternative = &quot;two.sided&quot;</code> is not allowed for
+<code>method = &quot;bayes&quot;</code>.</p>
+<p>The same posterior is used at each interim look to compute the
+predictive probability of eventual success, which drives the futility
+(<code>Fn</code>) and expected-success (<code>Sn</code>) stopping rules.
+Predictive probabilities are obtained by imputing remaining follow-up
+from the posterior predictive distribution of the
+(piecewise-)exponential model and re-evaluating the success criterion on
+each completed dataset.</p>
+</div>
+<div id="setting-up-the-design" class="section level2">
+<h2>Setting up the design</h2>
+<p>Suppose the existing standard of care has a 30% event probability by
+24 months, and we are testing a new agent that we hope will reduce this
+to 20%. We use an interim look at 50 of 80 enrolled subjects:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>end_of_study <span class="ot">&lt;-</span> <span class="dv">24</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>benchmark <span class="ot">&lt;-</span> <span class="fl">0.30</span>                       <span class="co"># external standard-of-care failure rate</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>target    <span class="ot">&lt;-</span> <span class="fl">0.20</span>                       <span class="co"># rate we hope the new therapy achieves</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># Convert the target failure rate into a constant hazard (so we can simulate)</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="at">probs =</span> target, <span class="at">endtime =</span> end_of_study)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>ht</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; [1] 0.009297648</span></span></code></pre></div>
+<p>Now we run <code>survival_adapt()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,              <span class="co"># single-arm</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,                 <span class="co"># enrolments per month (constant)</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),       <span class="co"># Gamma(0.1, 0.1) on the hazard</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,                 <span class="co"># default; inert in single-arm mode</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),           <span class="co"># default; inert in single-arm mode</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,         <span class="co"># benchmark failure probability</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>out</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1           0.95    0.3        less          80         0         80    80</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_expected_success</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 1       0.9985 0.1689997        0.86             0                     0</span></span></code></pre></div>
+<p>A few points to highlight in the output:</p>
+<ul>
+<li><code>N_control = 0</code>: no concurrent control was
+simulated.</li>
+<li><code>margin = 0.30</code>: this is the value of <code>h0</code>
+that the trial is testing against. Note that it is on the
+cumulative-failure scale, not the survival scale.</li>
+<li><code>est_final</code> is the posterior mean of <span class="math inline">\(p_{\text{treatment}}\)</span> at
+<code>end_of_study</code>, <em>not</em> a treatment effect relative to
+control.</li>
+<li><code>post_prob_ha</code> is the posterior probability that <span class="math inline">\(p_{\text{treatment}} &lt; h_0\)</span>.</li>
+</ul>
+</div>
+<div id="why-block-and-rand_ratio-still-appear" class="section level2">
+<h2>Why <code>block</code> and <code>rand_ratio</code> still appear</h2>
+<p><code>survival_adapt()</code> shares its trial-data simulator with
+the two-arm case. In single-arm mode the simulator skips
+<code>randomization()</code> entirely and assigns every subject to the
+treatment arm; <code>block</code> and <code>rand_ratio</code> are
+therefore inert and can be left at their defaults. The
+minimum-<code>interim_look</code> rule
+(<code>interim_look &gt;= max(block)</code>) only applies to two-arm
+designs, so a single-arm trial can use any <code>interim_look</code>
+strictly less than <code>N_total</code>.</p>
+</div>
+<div id="operating-characteristics" class="section level2">
+<h2>Operating characteristics</h2>
+<p>A single trial does not tell you whether the design is
+well-calibrated. To estimate power and type I error, we run the design
+under each scenario using <code>sim_trials()</code>. The chunks below
+are not run when knitting (each takes a few minutes) but illustrate the
+workflow:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Power: simulate under the alternative (true rate = 0.20)</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>out_power <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">N_trials         =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co"># Type I error: simulate under the null (true rate = benchmark = 0.30)</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>ht_null <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="at">probs =</span> benchmark, <span class="at">endtime =</span> end_of_study)</span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>  <span class="at">N_trials         =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht_null,</span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,</span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,</span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power<span class="sc">$</span>sims, out_t1error<span class="sc">$</span>sims))</span></code></pre></div>
+<p>Calibration proceeds the same way as for two-arm designs: if the type
+I error under the null (where the true rate equals the benchmark) is
+above the desired level, raise <code>prob_ha</code>; if power is too
+low, increase <code>N_total</code> or relax the
+<code>Fn</code>/<code>Sn</code> thresholds.</p>
+</div>
+<div id="a-practical-caveat-on-benchmarks" class="section level2">
+<h2>A practical caveat on benchmarks</h2>
+<p>The validity of a single-arm Goldilocks trial rests entirely on the
+benchmark <code>h0</code> being a fair representation of the population
+the trial is enrolling. Drift in standard of care, differences in
+patient mix, and unmeasured confounding all bias the comparison in a way
+that randomisation would otherwise neutralise. A Bayesian framework can
+incorporate uncertainty about the benchmark itself – e.g. by replacing a
+fixed <code>h0</code> with a prior distribution informed by historical
+data – but this is outside the scope of the simple <code>h0</code>
+scalar that <code>survival_adapt()</code> exposes, and would require a
+custom analysis. When in doubt, simulating the design under several
+plausible values of the true rate (including ones near the benchmark) is
+a useful way to characterise its sensitivity.</p>
+</div>
+<div id="see-also" class="section level2">
+<h2>See also</h2>
+<ul>
+<li>The “Example: Two-armed RCT” vignette covers the corresponding
+two-arm randomised design with a log-rank decision rule.</li>
+<li>The “Bayesian decisions with piecewise-exponential hazards” vignette
+covers the same decision rule used here, but in a two-arm setting and
+with non-constant hazards. The piecewise machinery applies directly to
+single-arm trials too (just keep <code>hazard_control = NULL</code> and
+pass a per-interval <code>hazard_treatment</code> vector).</li>
+<li><code>?survival_adapt</code> documents all arguments.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

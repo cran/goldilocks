@@ -1,16 +1,18 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# goldilocks <img src="man/figures/hex.png" width="175" height="200" align="right"/>
+# goldilocks <img src="man/figures/hex.png" width="175" height="200" align="right" alt="goldilocks package hex sticker logo"/>
 
 <!-- badges: start -->
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
-[![](https://cranlogs.r-pkg.org/badges/grand-total/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
+[![CRAN total
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
 [![Codecov test
 coverage](https://codecov.io/gh/graemeleehickey/goldilocks/graph/badge.svg)](https://app.codecov.io/gh/graemeleehickey/goldilocks)
 [![R-CMD-check](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/graemeleehickey/goldilocks/actions/workflows/pkgdown.yaml/badge.svg)](https://graemeleehickey.github.io/goldilocks/)
 
 <!-- badges: end -->
 
@@ -43,9 +45,12 @@ operating characteristics, e.g. type I error and power. Hence, a
 computationally efficient and fast algorithm is helpful. The
 `goldilocks` package takes advantage of many tools to achieve this:
 
-- Log-rank tests are implemented via code from the
+- Log-rank tests are implemented via a lightweight C++ implementation
+  originally from the
   [`fastlogranktest`](https://CRAN.R-project.org/package=fastlogranktest)
-  package, which uses a lightweight C++ implementation
+  package. Since `fastlogranktest` has been deprecated and removed from
+  CRAN, a copy of the C++ source code has been ported directly into
+  `goldilocks`
 
 - Piecewise exponential simulation is implemented via the
   [`PWEALL`](https://CRAN.R-project.org/package=PWEALL) package, which
@@ -53,10 +58,6 @@ computationally efficient and fast algorithm is helpful. The
 
 - Simulation of multiple trials can be performed in parallel using the
   [`pbmcapply`](https://CRAN.R-project.org/package=pbmcapply) package
-
-**Note**: because `fastlogranktest` is no longer available on CRAN, a
-copy of the C++ code and wrapper have been incorporated directly into
-this package.
 
 ## References
 

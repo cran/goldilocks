@@ -5,6 +5,13 @@ knitr::opts_chunk$set(
 )
 load("vignette-sims.rda")
 
+## ----one_sided_example, eval=FALSE--------------------------------------------
+# out_power_1sided <- update(
+#   out_power,
+#   alternative = "less",
+#   prob_ha = 0.975
+# )
+
 ## ----setup--------------------------------------------------------------------
 library(goldilocks)
 
@@ -15,7 +22,7 @@ library(goldilocks)
 # out_power <- sim_trials(
 #   hazard_treatment = ht,
 #   hazard_control = hc,
-#   cutpoint = 0,
+#   cutpoints = 0,
 #   N_total = 300,
 #   lambda = 5,
 #   lambda_time = 0,
@@ -38,12 +45,20 @@ library(goldilocks)
 # out_t1error <- update(out_power, hazard_treatment = hc)
 
 ## ----summarise_sims-----------------------------------------------------------
-summarise_sims(list(out_power$sims, out_t1error$sims))
+knitr::kable(
+  summarise_sims(list(out_power$sims, out_t1error$sims)),
+  digits = 3,
+  caption = "Operating characteristics with a two-sided log-rank test at the 0.05 level. Scenario 1 is the alternative (treatment OS 50%); scenario 2 is the null (treatment OS 30%)."
+)
 
 ## ----example_p0.04, eval=FALSE------------------------------------------------
 # out_power2 <- update(out_power, prob_ha = 0.96)
 # out_t1error2 <- update(out_power2, hazard_treatment = hc)
 
 ## ----summarise_sims_p0.04-----------------------------------------------------
-summarise_sims(list(out_power2$sims, out_t1error2$sims))
+knitr::kable(
+  summarise_sims(list(out_power2$sims, out_t1error2$sims)),
+  digits = 3,
+  caption = "Operating characteristics with the more stringent P < 0.04 threshold (`prob_ha = 0.96`)."
+)
 

@@ -47,7 +47,12 @@ to treatment. Integer values mapping the size of the block. See
 \code{\link{randomization}} for more details.}
 
 \item{prop_loss}{scalar. Overall proportion of subjects lost to follow-up.
-Defaults to zero.}
+Subjects are selected at random for LTFU regardless of treatment arm or
+event status. Each LTFU subject's observed time is drawn from a
+\code{Uniform(0, t)} distribution, where \code{t} is their potential
+event or censoring time. Since the LTFU time is always less than
+\code{t}, the event has not yet occurred at dropout and the subject is
+right-censored. Defaults to zero.}
 }
 \value{
 A data frame with 1 row per subject and columns:

@@ -3,15 +3,27 @@
 #'
 #' @inheritParams sim_comp_data
 #' @param interim_look vector. Sample size for each interim look. Note: the
-#'   maximum sample size should not be included.
+#'   maximum sample size should not be included. For two-arm designs, each
+#'   interim look must be at least the (largest) block size (see \code{block}),
+#'   ensuring both treatment arms are present at every interim analysis; a
+#'   smaller look could enrol subjects from a single arm only, leaving the
+#'   interim posterior undefined for the missing arm.
 #' @param prior vector. The prior distributions for the piecewise hazard rate
-#'   parameters are each \eqn{Gamma(a_0, b_0)}, with specified (known)
-#'   hyper-parameters \eqn{a_0} and \eqn{b_0}. The default non-informative prior
-#'   distribution used is Gamma(0.1, 0.1), which is specified by setting
-#'   \code{prior = c(0.1, 0.1)}.
+#'   parameters are each \eqn{Gamma(a_0, b_0)}, where \eqn{a_0} is the shape
+#'   parameter and \eqn{b_0} is the rate parameter (i.e., the inverse of the
+#'   scale). This follows R's \code{\link[stats]{rgamma}} parameterization. The
+#'   same prior is applied to all piecewise intervals and to both treatment
+#'   arms. The default non-informative prior distribution used is
+#'   \code{Gamma(0.1, 0.1)}, which is specified by setting \code{prior = c(0.1,
+#'   0.1)}.
 #' @param alternative character. The string specifying the alternative
 #'   hypothesis, must be one of \code{"greater"} (default), \code{"less"} or
-#'   \code{"two.sided"}.
+#'   \code{"two.sided"}. All three options are supported for \code{method =
+#'   "bayes"}, \code{"logrank"}, and \code{"cox"}. The chi-square test
+#'   (\code{method = "chisq"}) only supports \code{"two.sided"}. For survival
+#'   outcomes, \code{"less"} corresponds to the treatment group having a lower
+#'   cumulative incidence (i.e., treatment is beneficial), and \code{"greater"}
+#'   corresponds to the treatment group having a higher cumulative incidence.
 #' @param h0 scalar. Null hypothesis value of \eqn{p_\textrm{treatment} -
 #'   p_\textrm{control}} when \code{method = "bayes"}. Default is \code{h0 = 0}.
 #'   The argument is ignored when \code{method = "logrank"} or \code{= "cox"};
@@ -83,15 +95,16 @@
 #'      the success threshold is \eqn{P < 0.05}, then one requires
 #'      \code{post_prob_ha} \eqn{> 0.95}. The reason for this is to enable
 #'      simple switching between Bayesian and frequentist paradigms for
-#'      analysis.
+#'      analysis. When \code{alternative = "less"} or \code{"greater"}, a
+#'      one-sided \emph{P}-value is computed from the log-rank z-statistic.
 #'
 #'   * Cox proportional hazards regression Wald test (\code{method = "cox"}).
-#'      Similar to the log-rank test, a \emph{P}-value is calculated based on a
-#'      two-sided test. However, for consistency, \eqn{1 - P}, which is
-#'      reported in \code{post_prob_ha}. Whilst not a posterior probability, it
-#'      can be contrasted in the same manner. For example, if the success
-#'      threshold is \eqn{P < 0.05}, then one requires \code{post_prob_ha}
-#'      \eqn{> 0.95}.
+#'      Similar to the log-rank test, a \emph{P}-value is calculated and
+#'      \eqn{1 - P} is reported in \code{post_prob_ha}. When
+#'      \code{alternative = "two.sided"}, the standard two-sided Wald
+#'      \emph{P}-value is used. When \code{alternative = "less"} or
+#'      \code{"greater"}, a one-sided \emph{P}-value is derived from the Wald
+#'      z-statistic. The treatment effect (log hazard ratio) is also reported.
 #'
 #'   * Bayesian absolute difference (\code{method = "bayes"}).
 #'      Each imputed dataset is used to update the conjugate Gamma prior
@@ -116,7 +129,11 @@
 #'      For example, if the success threshold is \eqn{P < 0.05}, then one
 #'      requires \code{post_prob_ha} \eqn{> 0.95}. The reason for this is to
 #'      enable simple switching between Bayesian and frequentist paradigms for
-#'      analysis.
+#'      analysis. Because the chi-square test cannot handle right-censored
+#'      observations, subjects lost to follow-up are excluded from the final
+#'      analysis when \code{imputed_final = FALSE}. When
+#'      \code{imputed_final = TRUE}, LTFU subjects are imputed before the
+#'      test is applied, so all subjects are included.
 #'
 #'  * Imputed final analysis (\code{imputed_final}).
 #'      The overall final analysis conducted after accrual is suspended and
@@ -129,6 +146,27 @@
 #'      right-censored due to loss to follow-up, which we assume is a
 #'      non-informative process. This can be used with any \code{method}.
 #'
+#'   When \code{method = "bayes"} and imputation is involved (either at interim
+#'   analyses or via \code{imputed_final = TRUE}), a two-stage posterior
+#'   procedure is used. First, the posterior distribution of the piecewise
+#'   hazard rates is estimated from the \emph{observed} data and used to draw
+#'   imputed event times for censored subjects. Second, a \emph{new} posterior
+#'   is estimated from the combined observed and imputed data, and this
+#'   posterior is used for inference. This is consistent with the predictive
+#'   probability framework described in Broglio et al. (2014), but users
+#'   should be aware that the imputation model's posterior influences the
+#'   analysis posterior. For frequentist methods (\code{"logrank"},
+#'   \code{"cox"}, \code{"chisq"}), the second stage uses a standard test
+#'   rather than a posterior, so this feedback loop does not arise.
+#'
+#'   At each interim look, follow-up times are masked (censored) to reflect
+#'   the calendar time of the analysis. Subjects enrolled at the exact interim
+#'   boundary have zero follow-up time, which is incompatible with
+#'   \code{\link[survival]{survSplit}}. These times are clamped to
+#'   \code{.Machine$double.eps} (approximately \eqn{2.2 \times 10^{-16}}) so
+#'   that they contribute negligible but non-zero exposure. This affects at
+#'   most one subject per interim look.
+#'
 #' @return A data frame containing some input parameters (arguments) as well as
 #'   statistics from the analysis, including:
 #'
@@ -139,10 +177,6 @@
 #'     \item{\code{N_control:}}{
 #'       integer. The number of patients enrolled in the control arm for
 #'       each simulation.}
-#'     \item{\code{est_interim:}}{
-#'       scalar. The treatment effect that was estimated at the time of the
-#'       interim analysis. Note this is not actually used in the final
-#'       analysis.}
 #'     \item{\code{est_final:}}{
 #'       scalar. The treatment effect that was estimated at the final analysis.
 #'       Final analysis occurs when either the maximum sample size is reached
@@ -254,6 +288,23 @@ survival_adapt <- function(
   # Check: 'interim_look' bounded by maximum sample size
   if (!is.null(interim_look)) {
     stopifnot(all(N_total > interim_look))
+
+    # Check: each interim look is large enough to (with block randomization)
+    # guarantee both arms are represented. A look smaller than one full block
+    # can enrol subjects from a single arm only, which would make the interim
+    # posterior undefined for the missing arm. For two-arm designs we require
+    # each look to be at least the (largest) block size.
+    if (!single_arm) {
+      min_look <- max(block)
+      if (any(interim_look < min_look)) {
+        stop(
+          "Each 'interim_look' must be at least the block size (",
+          min_look, ") so that both treatment arms are present at every ",
+          "interim analysis. Smallest 'interim_look' given: ",
+          min(interim_look), "."
+        )
+      }
+    }
   }
 
   # Check: 'alternative' is correctly specified
@@ -266,9 +317,9 @@ survival_adapt <- function(
     stop("The Bayes test can only be used with alternative equal to 'greater' or 'less'")
   }
 
-  # Check: frequentist tests (currently) only available as two.sided tests
-  if (alternative != "two.sided" & method %in% c("logrank", "cox", "chisq")) {
-    stop("The selected method can only be applied as a two-sided test")
+  # Check: chi-square test only available as two-sided
+  if (alternative != "two.sided" & method == "chisq") {
+    stop("The chi-square test can only be applied as a two-sided test")
   }
 
   # Check: frequentist tests only available for two-armed trials
@@ -339,8 +390,6 @@ survival_adapt <- function(
       #                            e.g. if patient enrolled month 3, but look occurs month 7,
       #                            then patient could potentially be observed for 4 months
 
-      loss_to_fu <- NA
-
       data_interim <- within(data_total, {
         subject_enrolled = (id <= analysis_at_enrollnumber[i])
         subject_impute_futility = !subject_enrolled
@@ -354,8 +403,12 @@ survival_adapt <- function(
       })
 
       # Mask the data at time of look
+      # Note: subjects at the exact interim boundary have
+      # time_from_rand_at_look = 0, yielding time = 0 after masking.
+      # survival::survSplit() requires all times > 0, so we clamp to
+      # .Machine$double.eps.
       data_interim <- within(data_interim, {
-        time  = pmin(time, time_from_rand_at_look) + sd(time) / 1e4
+        time  = pmax(pmin(time, time_from_rand_at_look), .Machine$double.eps)
         event = ifelse(subject_impute_success, 0, event)
       })
 
@@ -454,7 +507,7 @@ survival_adapt <- function(
   # - complete follow-up (except any censoring)
   data_final <- subset(data_total, id <= stage_trial_stopped)
   data_final <- within(data_final, {
-    time_from_rand_at_look = enrollment[analysis_at_enrollnumber[i]] - enrollment
+    time_from_rand_at_look = enrollment[stage_trial_stopped] - enrollment
     subject_impute_success = ((event == 0) & (time < end_of_study))
   })
 

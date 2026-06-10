@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -366,7 +367,7 @@ subject has completed 12-months of follow-up.</p>
 <code>hazard_control = prop_to_haz(1 - 0.30, endtime = 12)</code> (note
 that the input argument is the failure proportion, not the survival
 proportion)</li>
-<li>No change points in hazard: <code>cutpoint = 0</code> (default
+<li>No change points in hazard: <code>cutpoints = 0</code> (default
 parameter)</li>
 <li>Maximum sample size: <code>N_total = 300</code></li>
 <li>No attrition: <code>prop_loss = 0</code></li>
@@ -408,6 +409,49 @@ between test, including Bayesian tests (<code>method = &quot;bayes&quot;</code>)
 which requires an analogous posterior probability threshold. The
 parameter <code>h0</code> is ignored when using a log-rank test, as it
 is not meaningful to have success margins.</p>
+<div id="one-sided-tests" class="section level3">
+<h3>One-sided tests</h3>
+<p>The example above uses a two-sided test. When the trial is designed
+to detect a benefit in one direction only – here, longer survival on the
+treatment arm – a one-sided test is often more appropriate and more
+powerful. The <code>cox</code> and <code>logrank</code> methods support
+all three alternatives via the <code>alternative</code> argument. For
+these methods the direction is defined on the hazard scale:</p>
+<ul>
+<li><code>alternative = &quot;less&quot;</code> declares success when the
+treatment arm has a <em>lower</em> hazard (longer survival) than
+control.</li>
+<li><code>alternative = &quot;greater&quot;</code> declares success when the
+treatment arm has a <em>higher</em> hazard.</li>
+</ul>
+<p>For instance, to run the same design as a one-sided log-rank test at
+the 0.025 level, we would set:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>out_power_1sided <span class="ot">&lt;-</span> <span class="fu">update</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  out_power,</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.975</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>)</span></code></pre></div>
+<p>The chi-square test (<code>method = &quot;chisq&quot;</code>) supports
+<code>&quot;two.sided&quot;</code> only. The Bayesian test
+(<code>method = &quot;bayes&quot;</code>) is the opposite: it <em>requires</em> a
+one-sided alternative (<code>&quot;less&quot;</code> or <code>&quot;greater&quot;</code>),
+and <code>&quot;two.sided&quot;</code> raises an error. For the Bayesian test the
+effect is measured on the cumulative-failure-probability scale, <span class="math inline">\(p_\textrm{treatment} - p_\textrm{control}\)</span>
+at <code>end_of_study</code>, compared against the margin
+<code>h0</code> (default <code>0</code>):</p>
+<ul>
+<li><code>alternative = &quot;less&quot;</code> declares success when the
+posterior probability that <span class="math inline">\(p_\textrm{treatment} - p_\textrm{control}
+&lt;\)</span> <code>h0</code> exceeds the threshold <code>prob_ha</code>
+– i.e. the treatment arm has a <em>lower</em> failure probability
+(longer survival).</li>
+<li><code>alternative = &quot;greater&quot;</code> declares success when the
+posterior probability that <span class="math inline">\(p_\textrm{treatment} - p_\textrm{control}
+&gt;\)</span> <code>h0</code> exceeds <code>prob_ha</code>.</li>
+</ul>
+<p>In all methods, <code>alternative = &quot;less&quot;</code> therefore
+corresponds to a beneficial treatment effect (longer survival) in this
+example.</p>
 <p>The operating characteristics will be determined using 500 simulated
 trials. At each interim analysis, we will use 100 imputations and assume
 independent weakly-informative Gamma(0.1, 0.1) prior distributions for
@@ -433,32 +477,31 @@ to impute the final analysis dataset, we could change this to
 <p>Initially, we want to determine the power to detect a significant
 treatment effect when the OS rate at 12-months for the treatment arm is
 50%.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co">#&gt; Loading required package: survival</span></span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>hc <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.7</span>, <span class="at">endtime =</span> <span class="dv">12</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.5</span>, <span class="at">endtime =</span> <span class="dv">12</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>out_power <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">hazard_control =</span> hc,</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">cutpoint =</span> <span class="dv">0</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">300</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">lambda =</span> <span class="dv">5</span>,</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">lambda_time =</span> <span class="dv">0</span>,</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">interim_look =</span> <span class="fu">seq</span>(<span class="dv">100</span>, <span class="dv">275</span>, <span class="dv">25</span>),</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">12</span>,</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">2</span>,</span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;two.sided&quot;</span>,</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fu">rep</span>(<span class="fl">0.10</span>, <span class="dv">8</span>),</span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="fl">0.9</span>, <span class="dv">7</span>)),</span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.95</span>,</span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">100</span>,</span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">500</span>,</span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;logrank&quot;</span>,</span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">8</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>hc <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.7</span>, <span class="at">endtime =</span> <span class="dv">12</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.5</span>, <span class="at">endtime =</span> <span class="dv">12</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>out_power <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">hazard_control =</span> hc,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">cutpoints =</span> <span class="dv">0</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">300</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">lambda =</span> <span class="dv">5</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">lambda_time =</span> <span class="dv">0</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">interim_look =</span> <span class="fu">seq</span>(<span class="dv">100</span>, <span class="dv">275</span>, <span class="dv">25</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">12</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">prior =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">2</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;two.sided&quot;</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fu">rep</span>(<span class="fl">0.10</span>, <span class="dv">8</span>),</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="fl">0.9</span>, <span class="dv">7</span>)),</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.95</span>,</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">100</span>,</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">500</span>,</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">8</span>)</span></code></pre></div>
 <p>The simulations take approximately 3 minutes to run on 2 GHz
 Quad-Core Intel i5 MacBook Pro.</p>
 <p>It is straightforward to calculate the type I error under this
@@ -467,16 +510,64 @@ design. The only change required is to set the
 <code>hazard_control</code> argument (i.e. the null case). We can make
 use of the <code>update()</code> function to avoid having to type
 everything else over again.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power<span class="sc">$</span>sims, out_t1error<span class="sc">$</span>sims))</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 8</span></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt;   scenario power stop_success stop_futility stop_max_N mean_N  sd_N</span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;      &lt;int&gt; &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; 1        1 0.934       0.916         0.0400     0.044    171.  53.3</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; 2        2 0.068       0.0560        0.846      0.0980   210.  47.6</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; # ℹ 1 more variable: stop_and_fail &lt;dbl&gt;</span></span></code></pre></div>
-<p>The type I error under this design is slightly too large to be
-considered acceptable. This was to be expected, since we kept the <span class="math inline">\(P\)</span>-value threshold as 0.05 despite having
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power<span class="sc">$</span>sims, out_t1error<span class="sc">$</span>sims)),</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Operating characteristics with a two-sided log-rank test at the 0.05 level. Scenario 1 is the alternative (treatment OS 50%); scenario 2 is the null (treatment OS 30%).&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span></code></pre></div>
+<table style="width:100%;">
+<caption>Operating characteristics with a two-sided log-rank test at the
+0.05 level. Scenario 1 is the alternative (treatment OS 50%); scenario 2
+is the null (treatment OS 30%).</caption>
+<colgroup>
+<col width="11%" />
+<col width="7%" />
+<col width="16%" />
+<col width="17%" />
+<col width="13%" />
+<col width="8%" />
+<col width="8%" />
+<col width="17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">scenario</th>
+<th align="right">power</th>
+<th align="right">stop_success</th>
+<th align="right">stop_futility</th>
+<th align="right">stop_max_N</th>
+<th align="right">mean_N</th>
+<th align="right">sd_N</th>
+<th align="right">stop_and_fail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.934</td>
+<td align="right">0.916</td>
+<td align="right">0.040</td>
+<td align="right">0.044</td>
+<td align="right">171.4</td>
+<td align="right">53.294</td>
+<td align="right">0.016</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">0.068</td>
+<td align="right">0.056</td>
+<td align="right">0.846</td>
+<td align="right">0.098</td>
+<td align="right">209.8</td>
+<td align="right">47.602</td>
+<td align="right">0.008</td>
+</tr>
+</tbody>
+</table>
+<p>The type I error under this design (scenario 2, <code>power</code>
+column) is slightly too large to be considered acceptable. This was to
+be expected, since we kept the <span class="math inline">\(P\)</span>-value threshold as 0.05 despite having
 multiple interim looks. However, we note that only simulated
 <code>N_trials = 500</code> trials, meaning if the type I error was
 truly 0.05, then values in the interval
@@ -487,15 +578,61 @@ control the overall type I error. This can be achieved by trial and
 error. For example, if we use <span class="math inline">\(P &lt;
 0.04\)</span> (applied using the argument <code>prob_ha = 0.96</code>),
 we find the operating characteristics are more acceptable.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>out_power2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">prob_ha =</span> <span class="fl">0.96</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>out_t1error2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power2, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power2<span class="sc">$</span>sims, out_t1error2<span class="sc">$</span>sims))</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 8</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt;   scenario power stop_success stop_futility stop_max_N mean_N  sd_N</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;      &lt;int&gt; &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; 1        1 0.92        0.89          0.0440     0.0660   175.  56.2</span></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; 2        2 0.048       0.0420        0.868      0.09     203.  46.8</span></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; # ℹ 1 more variable: stop_and_fail &lt;dbl&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>out_power2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">prob_ha =</span> <span class="fl">0.96</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>out_t1error2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power2, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power2<span class="sc">$</span>sims, out_t1error2<span class="sc">$</span>sims)),</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Operating characteristics with the more stringent P &lt; 0.04 threshold (`prob_ha = 0.96`).&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>)</span></code></pre></div>
+<table style="width:100%;">
+<caption>Operating characteristics with the more stringent P &lt; 0.04
+threshold (<code>prob_ha = 0.96</code>).</caption>
+<colgroup>
+<col width="11%" />
+<col width="7%" />
+<col width="16%" />
+<col width="17%" />
+<col width="13%" />
+<col width="8%" />
+<col width="8%" />
+<col width="17%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">scenario</th>
+<th align="right">power</th>
+<th align="right">stop_success</th>
+<th align="right">stop_futility</th>
+<th align="right">stop_max_N</th>
+<th align="right">mean_N</th>
+<th align="right">sd_N</th>
+<th align="right">stop_and_fail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">0.920</td>
+<td align="right">0.890</td>
+<td align="right">0.044</td>
+<td align="right">0.066</td>
+<td align="right">175.35</td>
+<td align="right">56.213</td>
+<td align="right">0.02</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">0.048</td>
+<td align="right">0.042</td>
+<td align="right">0.868</td>
+<td align="right">0.090</td>
+<td align="right">202.80</td>
+<td align="right">46.760</td>
+<td align="right">0.01</td>
+</tr>
+</tbody>
+</table>
 <p>Assuming the treatment arm has an OS rate of 50% at 12-months, the
 trial would be expected to stop early 89% of time, with an average
 sample size of 175. Overall, the power is 92%. Conversely, if the
@@ -504,6 +641,7 @@ stopped early for expected futility.</p>
 <p>Once we have identified a suitable design, we would typically re-run
 the simulations using a larger number of simulations and, perhaps,
 imputations.</p>
+</div>
 <div id="references" class="section level2">
 <h2>References</h2>
 <p>Broglio KR, Connor JT, Berry SM. Not too big, not too small: a
