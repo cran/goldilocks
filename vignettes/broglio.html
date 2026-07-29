@@ -12,7 +12,7 @@
 
 
 
-<title>Example: Two-armed RCT</title>
+<title>Two-arm randomized trials</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,7 +337,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Example: Two-armed RCT</h1>
+<h1 class="title toc-ignore">Two-arm randomized trials</h1>
 
 
 
@@ -346,17 +346,20 @@ We will use a similar setup for this example, and break up the pieces to
 make clear the argument choices for the package.</p>
 <p>The setting is a two-arm randomized trial where patients are equally
 randomized to either a control or a treatment arm. The primary endpoint
-is overall survival (OS) measured from the date of randomization to the
-date of death from any cause or last follow-up. The expected OS rate at
-12-months for the control arm is 30%. The minimum sample size is 100 and
-the maximum sample size is 300. For simplicity, it is assumed that there
-is no attrition. The maximum follow-up period for each subject is
-12-months. (Note: this is slightly different from Broglio et al. (2014),
-as they assumed a follow-up period of 12-months on all subjects after
-accrual is complete.) Thus, if accrual is stopped early for predicted
-success or the trial continues accrual to the maximum sample size of 300
-patients, the primary analysis of OS will be conducted after each
-subject has completed 12-months of follow-up.</p>
+is overall survival (OS) measured from enrollment to death from any
+cause or last follow-up. In <code>goldilocks</code>, enrollment time and
+randomization time are treated as the same time point; in practice they
+can differ, but that distinction is not represented in the package
+simulator. The expected OS rate at 12-months for the control arm is 30%.
+The minimum sample size is 100 and the maximum sample size is 300. For
+simplicity, it is assumed that there is no attrition. The maximum
+follow-up period for each subject is 12-months. (Note: this is slightly
+different from Broglio et al. (2014), as they assumed a follow-up period
+of 12-months on all subjects after accrual is complete.) Thus, if
+accrual is stopped early for predicted success or the trial continues
+accrual to the maximum sample size of 300 patients, the primary analysis
+of OS will be conducted after each subject has completed 12-months of
+follow-up.</p>
 <p>From this information, we have:</p>
 <ul>
 <li>Equal randomization: <code>block = 2</code> and
@@ -405,10 +408,11 @@ and <code>method = &quot;logrank&quot;</code></li>
 declare success: <code>prob_ha = 0.95</code></li>
 </ul>
 <p>Note that <code>prob_ha</code> is set as <span class="math inline">\(1 - 0.05\)</span>. This allows us to interchange
-between test, including Bayesian tests (<code>method = &quot;bayes&quot;</code>),
-which requires an analogous posterior probability threshold. The
-parameter <code>h0</code> is ignored when using a log-rank test, as it
-is not meaningful to have success margins.</p>
+between test, including Bayesian tests
+(<code>method = &quot;bayes-surv&quot;</code>), which requires an analogous
+posterior probability threshold. The parameter <code>h0</code> is
+ignored when using a log-rank test, as it is not meaningful to have
+success margins.</p>
 <div id="one-sided-tests" class="section level3">
 <h3>One-sided tests</h3>
 <p>The example above uses a two-sided test. When the trial is designed
@@ -433,10 +437,11 @@ the 0.025 level, we would set:</p>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>)</span></code></pre></div>
 <p>The chi-square test (<code>method = &quot;chisq&quot;</code>) supports
 <code>&quot;two.sided&quot;</code> only. The Bayesian test
-(<code>method = &quot;bayes&quot;</code>) is the opposite: it <em>requires</em> a
-one-sided alternative (<code>&quot;less&quot;</code> or <code>&quot;greater&quot;</code>),
-and <code>&quot;two.sided&quot;</code> raises an error. For the Bayesian test the
-effect is measured on the cumulative-failure-probability scale, <span class="math inline">\(p_\textrm{treatment} - p_\textrm{control}\)</span>
+(<code>method = &quot;bayes-surv&quot;</code>) is the opposite: it
+<em>requires</em> a one-sided alternative (<code>&quot;less&quot;</code> or
+<code>&quot;greater&quot;</code>), and <code>&quot;two.sided&quot;</code> raises an error.
+For the Bayesian test the effect is measured on the
+cumulative-failure-probability scale, <span class="math inline">\(p_\textrm{treatment} - p_\textrm{control}\)</span>
 at <code>end_of_study</code>, compared against the margin
 <code>h0</code> (default <code>0</code>):</p>
 <ul>
@@ -466,6 +471,7 @@ parallelize the simulations over multiple cores.</p>
 <code>prior = c(0.1, 0.1)</code></li>
 <li>Parallel computation: <code>ncores = 8</code> (note: this is not
 currently possible on Windows machines)</li>
+<li>Reproducible simulation streams: <code>seed = 123</code></li>
 </ul>
 <p>Similar to above, the parameter <code>N_mcmc</code> is not required
 when using a log-rank test, meaning we do not need to enter a value for
@@ -501,7 +507,8 @@ treatment effect when the OS rate at 12-months for the treatment arm is
 <span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">100</span>,</span>
 <span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">500</span>,</span>
 <span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;logrank&quot;</span>,</span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">8</span>)</span></code></pre></div>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">8</span>,</span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">123</span>)</span></code></pre></div>
 <p>The simulations take approximately 3 minutes to run on 2 GHz
 Quad-Core Intel i5 MacBook Pro.</p>
 <p>It is straightforward to calculate the type I error under this
@@ -510,7 +517,7 @@ design. The only change required is to set the
 <code>hazard_control</code> argument (i.e. the null case). We can make
 use of the <code>update()</code> function to avoid having to type
 everything else over again.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">hazard_treatment =</span> hc, <span class="at">seed =</span> <span class="dv">124</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power<span class="sc">$</span>sims, out_t1error<span class="sc">$</span>sims)),</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
@@ -532,7 +539,7 @@ is the null (treatment OS 30%).</caption>
 </colgroup>
 <thead>
 <tr class="header">
-<th align="right">scenario</th>
+<th align="left">scenario</th>
 <th align="right">power</th>
 <th align="right">stop_success</th>
 <th align="right">stop_futility</th>
@@ -544,7 +551,7 @@ is the null (treatment OS 30%).</caption>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">1</td>
+<td align="left">1</td>
 <td align="right">0.934</td>
 <td align="right">0.916</td>
 <td align="right">0.040</td>
@@ -554,7 +561,7 @@ is the null (treatment OS 30%).</caption>
 <td align="right">0.016</td>
 </tr>
 <tr class="even">
-<td align="right">2</td>
+<td align="left">2</td>
 <td align="right">0.068</td>
 <td align="right">0.056</td>
 <td align="right">0.846</td>
@@ -579,7 +586,7 @@ error. For example, if we use <span class="math inline">\(P &lt;
 0.04\)</span> (applied using the argument <code>prob_ha = 0.96</code>),
 we find the operating characteristics are more acceptable.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>out_power2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">prob_ha =</span> <span class="fl">0.96</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>out_t1error2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power2, <span class="at">hazard_treatment =</span> hc)</span></code></pre></div>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>out_t1error2 <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power2, <span class="at">hazard_treatment =</span> hc, <span class="at">seed =</span> <span class="dv">125</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power2<span class="sc">$</span>sims, out_t1error2<span class="sc">$</span>sims)),</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
@@ -600,7 +607,7 @@ threshold (<code>prob_ha = 0.96</code>).</caption>
 </colgroup>
 <thead>
 <tr class="header">
-<th align="right">scenario</th>
+<th align="left">scenario</th>
 <th align="right">power</th>
 <th align="right">stop_success</th>
 <th align="right">stop_futility</th>
@@ -612,7 +619,7 @@ threshold (<code>prob_ha = 0.96</code>).</caption>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">1</td>
+<td align="left">1</td>
 <td align="right">0.920</td>
 <td align="right">0.890</td>
 <td align="right">0.044</td>
@@ -622,7 +629,7 @@ threshold (<code>prob_ha = 0.96</code>).</caption>
 <td align="right">0.02</td>
 </tr>
 <tr class="even">
-<td align="right">2</td>
+<td align="left">2</td>
 <td align="right">0.048</td>
 <td align="right">0.042</td>
 <td align="right">0.868</td>

@@ -7,19 +7,27 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
-[![CRAN total
-downloads](https://cranlogs.r-pkg.org/badges/grand-total/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
-[![Codecov test
-coverage](https://codecov.io/gh/graemeleehickey/goldilocks/graph/badge.svg)](https://app.codecov.io/gh/graemeleehickey/goldilocks)
 [![R-CMD-check](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/graemeleehickey/goldilocks/actions/workflows/pkgdown.yaml/badge.svg)](https://graemeleehickey.github.io/goldilocks/)
+[![Codecov test
+coverage](https://codecov.io/gh/graemeleehickey/goldilocks/graph/badge.svg)](https://app.codecov.io/gh/graemeleehickey/goldilocks)
+[![CRAN
+checks](https://badges.cranchecks.info/worst/goldilocks.svg)](https://cran.r-project.org/web/checks/check_results_goldilocks.html)
+[![CRAN monthly
+downloads](https://cranlogs.r-pkg.org/badges/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
+[![CRAN total
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
+[![License: GPL
+v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 <!-- badges: end -->
 
 The goal of `goldilocks` is to implement the Goldilocks Bayesian
-adaptive design proposed by Broglio et al. (2014) for time-to-event
-endpoint trials, both one- and two-arm, with an underlying piecewise
-exponential hazard model.
+adaptive design proposed by Broglio et al. (2014), for both one- and
+two-arm trials. Outcomes are generated from an underlying
+piecewise-exponential event-time model. Final analyses may retain the
+time-to-event outcome or reduce complete follow-up to event status at a
+fixed endpoint time.
 
 The method can be used for a confirmatory trial to select a trial’s
 sample size based on accumulating data. During accrual, frequent sample
@@ -27,14 +35,37 @@ size selection analyses are made and predictive probabilities are used
 to determine whether the current sample size is sufficient or whether
 continuing accrual would be futile. The algorithm explicitly accounts
 for complete follow-up of all patients before the primary analysis is
-conducted. Final analysis tests include the log-rank test, Cox
-proportional hazards regression Wald test, and a Bayesian test that
-compares the absolute difference in cumulative incidence functions at a
-fixed time point.
+conducted. Time-to-event final analyses include the log-rank test, Cox
+proportional hazards regression Wald test, and Bayesian
+piecewise-exponential inference. Fixed-time binary final analyses
+include a frequentist risk-difference Wald test and Bayesian
+beta-binomial inference.
 
 Broglio et al. (2014) refer to this as a *Goldilocks trial design*, as
 it is constantly asking the question, “Is the sample size too big, too
 small, or just right?”
+
+## Endpoint and analysis options
+
+All designs use the piecewise-exponential event-time model for
+simulation and predictive imputation. The `method` argument selects the
+final analysis:
+
+- `"logrank"`: log-rank test for a two-arm time-to-event endpoint
+
+- `"cox"`: Cox model Wald test for a two-arm time-to-event endpoint
+
+- `"bayes-surv"`: Bayesian piecewise-exponential analysis for one- or
+  two-arm time-to-event endpoints
+
+- `"riskdiff"`: frequentist Wald test for a two-arm fixed-time binary
+  event-risk difference
+
+- `"bayes-bin"`: Bayesian beta-binomial analysis for one- or two-arm
+  fixed-time binary endpoints
+
+See the package vignettes for worked two-arm, single-arm, piecewise
+survival, and Bayesian binary examples.
 
 ## Key benefits
 
@@ -56,8 +87,8 @@ computationally efficient and fast algorithm is helpful. The
   [`PWEALL`](https://CRAN.R-project.org/package=PWEALL) package, which
   uses a lightweight Fortran implementation
 
-- Simulation of multiple trials can be performed in parallel using the
-  [`pbmcapply`](https://CRAN.R-project.org/package=pbmcapply) package
+- Simulation of multiple trials can be performed in parallel on
+  Unix-like platforms or Windows using R’s parallel backends
 
 ## References
 
@@ -67,7 +98,15 @@ Biopharmaceutical Statistics*, 2014; **24(3)**: 685–705.
 
 ## Installation
 
-You can install the development version of `goldilocks`
+The current source release is `goldilocks` 0.6.0.
+
+You can install the released version of `goldilocks` from CRAN with:
+
+``` r
+install.packages("goldilocks")
+```
+
+You can install the current source version from
 [GitHub](https://github.com/) with:
 
 ``` r

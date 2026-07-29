@@ -12,7 +12,7 @@
 
 
 
-<title>Single-arm trials</title>
+<title>Single-arm designs with a performance goal</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,25 +337,30 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Single-arm trials</h1>
+<h1 class="title toc-ignore">Single-arm designs with a performance
+goal</h1>
 
 
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
-<p>The other vignettes describe two-arm randomised designs. Single-arm
-trials – in which every subject receives the experimental therapy and
-the comparator is an external benchmark – are common in early-phase
-oncology, rare-disease, and proof-of-concept studies. This vignette
-shows how to set up a Goldilocks single-arm design with
-<code>survival_adapt()</code>.</p>
+<p>Several other vignettes focus on two-arm randomized designs, although
+the Bayesian binary outcome vignette also includes a single-arm example.
+Single-arm trials – in which every subject receives the experimental
+therapy and the comparator is an external benchmark, often called a
+performance goal (PG) or objective performance criterion (OPC) – are
+common in early-phase oncology, rare-disease, and proof-of-concept
+studies. This vignette shows how to set up a Goldilocks single-arm
+design with <code>survival_adapt()</code>.</p>
 <p>Two practical constraints on single-arm designs in this package:</p>
 <ul>
-<li>A single-arm trial is signalled by setting
+<li>A single-arm trial is signaled by setting
 <code>hazard_control = NULL</code>.</li>
-<li>Only <code>method = &quot;bayes&quot;</code> is supported for single-arm
-trials. The frequentist tests (<code>logrank</code>, <code>cox</code>,
-<code>chisq</code>) require two arms and will raise an error if used in
-this mode.</li>
+<li><code>method = &quot;bayes-surv&quot;</code> supports single-arm survival
+analyses with piecewise-exponential event-time modeling.
+<code>method = &quot;bayes-bin&quot;</code> supports single-arm analyses of
+complete binary outcomes. The frequentist methods (<code>logrank</code>,
+<code>cox</code>, <code>riskdiff</code>) require two arms and will raise
+an error if used in this mode.</li>
 </ul>
 <div id="the-decision-rule" class="section level2">
 <h2>The decision rule</h2>
@@ -367,7 +372,9 @@ the treatment arm itself:</p>
 <p>The argument <code>h0</code> plays the role of a benchmark on this
 scale: a target failure probability (or, equivalently, <span class="math inline">\(1 - h_0\)</span> is a target survival probability)
 drawn from external evidence such as a published rate, registry, or
-historical cohort. With <code>alternative = &quot;less&quot;</code> and
+historical cohort. In clinical-trial terminology this benchmark may be
+referred to as a performance goal (PG) or objective performance
+criterion (OPC). With <code>alternative = &quot;less&quot;</code> and
 <code>prob_ha</code>, the trial declares success when</p>
 <p><span class="math display">\[\Pr(p_{\text{treatment}} &lt; h_0 \mid
 \text{data}) \;&gt;\; \texttt{prob\_ha},\]</span></p>
@@ -375,7 +382,7 @@ historical cohort. With <code>alternative = &quot;less&quot;</code> and
 therapy has a lower failure rate than the benchmark”. Choosing
 <code>alternative = &quot;greater&quot;</code> reverses the direction;
 <code>alternative = &quot;two.sided&quot;</code> is not allowed for
-<code>method = &quot;bayes&quot;</code>.</p>
+<code>method = &quot;bayes-surv&quot;</code>.</p>
 <p>The same posterior is used at each interim look to compute the
 predictive probability of eventual success, which drives the futility
 (<code>Fn</code>) and expected-success (<code>Sn</code>) stopping rules.
@@ -401,30 +408,31 @@ to 20%. We use an interim look at 50 of 80 enrolled subjects:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,              <span class="co"># single-arm</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="cn">NULL</span>,</span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,                 <span class="co"># enrolments per month (constant)</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,                 <span class="co"># enrollments per month (constant)</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="cn">NULL</span>,</span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),       <span class="co"># Gamma(0.1, 0.1) on the hazard</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,                 <span class="co"># default; inert in single-arm mode</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),           <span class="co"># default; inert in single-arm mode</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,         <span class="co"># benchmark failure probability</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>out</span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1           0.95    0.3        less          80         0         80    80</span></span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_expected_success</span></span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 1       0.9985 0.1689997        0.86             0                     0</span></span></code></pre></div>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">prior_surv            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),       <span class="co"># Gamma(0.1, 0.1) on the hazard</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,         <span class="co"># benchmark failure probability</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes-surv&quot;</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>out</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 1           0.95    0.3        less          80         0         80    80</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_expected_success</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1        0.992 0.1825442        0.08             0                     0</span></span></code></pre></div>
+<p>There is no need to supply <code>block</code> or
+<code>rand_ratio</code>: they are redundant in a single-arm design
+because no randomization is performed.</p>
 <p>A few points to highlight in the output:</p>
 <ul>
 <li><code>N_control = 0</code>: no concurrent control was
@@ -438,18 +446,6 @@ control.</li>
 <li><code>post_prob_ha</code> is the posterior probability that <span class="math inline">\(p_{\text{treatment}} &lt; h_0\)</span>.</li>
 </ul>
 </div>
-<div id="why-block-and-rand_ratio-still-appear" class="section level2">
-<h2>Why <code>block</code> and <code>rand_ratio</code> still appear</h2>
-<p><code>survival_adapt()</code> shares its trial-data simulator with
-the two-arm case. In single-arm mode the simulator skips
-<code>randomization()</code> entirely and assigns every subject to the
-treatment arm; <code>block</code> and <code>rand_ratio</code> are
-therefore inert and can be left at their defaults. The
-minimum-<code>interim_look</code> rule
-(<code>interim_look &gt;= max(block)</code>) only applies to two-arm
-designs, so a single-arm trial can use any <code>interim_look</code>
-strictly less than <code>N_total</code>.</p>
-</div>
 <div id="operating-characteristics" class="section level2">
 <h2>Operating characteristics</h2>
 <p>A single trial does not tell you whether the design is
@@ -462,51 +458,70 @@ workflow:</p>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">N_trials         =</span> <span class="dv">1000</span>,</span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="cn">NULL</span>,</span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="cn">NULL</span>,</span>
 <span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
 <span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">prior_surv            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes-surv&quot;</span>,</span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  <span class="at">return_trace     =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">3082</span>)</span>
 <span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co"># Type I error: simulate under the null (true rate = benchmark = 0.30)</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co"># Type I error: simulate under the null (true rate = benchmark/PG/OPC = 0.30)</span></span>
 <span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>ht_null <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="at">probs =</span> benchmark, <span class="at">endtime =</span> end_of_study)</span>
 <span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>out_t1error <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
 <span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>  <span class="at">N_trials         =</span> <span class="dv">1000</span>,</span>
 <span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht_null,</span>
 <span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>  <span class="at">hazard_control   =</span> <span class="cn">NULL</span>,</span>
-<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="cn">NULL</span>,</span>
 <span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">80</span>,</span>
 <span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
-<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="cn">NULL</span>,</span>
 <span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">50</span>,</span>
 <span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
-<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>  <span class="at">prior            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
-<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">2</span>,</span>
-<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
-<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
-<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
-<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
-<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
-<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
-<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
-<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
-<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
-<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
-<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a></span>
-<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="fu">summarise_sims</span>(<span class="fu">list</span>(out_power<span class="sc">$</span>sims, out_t1error<span class="sc">$</span>sims))</span></code></pre></div>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>  <span class="at">prior_surv            =</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>),</span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>  <span class="at">h0               =</span> benchmark,</span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes-surv&quot;</span>,</span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">3083</span>)</span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a>oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>  <span class="st">&quot;target event probability&quot;</span> <span class="ot">=</span> out_power<span class="sc">$</span>sims,</span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a>  <span class="st">&quot;benchmark event probability&quot;</span> <span class="ot">=</span> out_t1error<span class="sc">$</span>sims</span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a>))</span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a>oc<span class="sc">$</span>true_event_probability <span class="ot">&lt;-</span> <span class="fu">c</span>(target, benchmark)</span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a>oc</span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a>  oc,</span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_event_probability&quot;</span>,</span>
+<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment event probability&quot;</span></span>
+<span id="cb4-60"><a href="#cb4-60" tabindex="-1"></a>)</span>
+<span id="cb4-61"><a href="#cb4-61" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(out_power)</span>
+<span id="cb4-62"><a href="#cb4-62" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(out_power)</span></code></pre></div>
+<p>The operating-characteristic plot compares scenarios on the
+clinically natural event-probability scale. The stopping plot then
+expands one scenario to show where enrollment ends and why. Finally, the
+decision map uses the retained traces to show how interim predictive
+probabilities fall relative to the expected-success and futility
+thresholds. For large calibration grids, retain traces only for
+scenarios whose interim behavior needs closer inspection.</p>
 <p>Calibration proceeds the same way as for two-arm designs: if the type
 I error under the null (where the true rate equals the benchmark) is
 above the desired level, raise <code>prob_ha</code>; if power is too
@@ -516,26 +531,27 @@ low, increase <code>N_total</code> or relax the
 <div id="a-practical-caveat-on-benchmarks" class="section level2">
 <h2>A practical caveat on benchmarks</h2>
 <p>The validity of a single-arm Goldilocks trial rests entirely on the
-benchmark <code>h0</code> being a fair representation of the population
-the trial is enrolling. Drift in standard of care, differences in
-patient mix, and unmeasured confounding all bias the comparison in a way
-that randomisation would otherwise neutralise. A Bayesian framework can
-incorporate uncertainty about the benchmark itself – e.g. by replacing a
-fixed <code>h0</code> with a prior distribution informed by historical
-data – but this is outside the scope of the simple <code>h0</code>
-scalar that <code>survival_adapt()</code> exposes, and would require a
-custom analysis. When in doubt, simulating the design under several
-plausible values of the true rate (including ones near the benchmark) is
-a useful way to characterise its sensitivity.</p>
+benchmark <code>h0</code> (the PG or OPC) being a fair representation of
+the population the trial is enrolling. Drift in standard of care,
+differences in patient mix, and unmeasured confounding all bias the
+comparison in a way that randomization would otherwise neutralize. A
+Bayesian framework can incorporate uncertainty about the benchmark
+itself – e.g. by replacing a fixed <code>h0</code> with a prior
+distribution informed by historical data – but this is outside the scope
+of the simple <code>h0</code> scalar that <code>survival_adapt()</code>
+exposes, and would require a custom analysis. When in doubt, simulating
+the design under several plausible values of the true rate (including
+ones near the benchmark) is a useful way to characterize its
+sensitivity.</p>
 </div>
 <div id="see-also" class="section level2">
 <h2>See also</h2>
 <ul>
-<li>The “Example: Two-armed RCT” vignette covers the corresponding
-two-arm randomised design with a log-rank decision rule.</li>
-<li>The “Bayesian decisions with piecewise-exponential hazards” vignette
-covers the same decision rule used here, but in a two-arm setting and
-with non-constant hazards. The piecewise machinery applies directly to
+<li>The “Two-arm randomized trials” vignette covers the corresponding
+two-arm randomized design with a log-rank decision rule.</li>
+<li>The “Bayesian piecewise-exponential designs” vignette covers the
+same decision rule used here, but in a two-arm setting and with
+non-constant hazards. The piecewise machinery applies directly to
 single-arm trials too (just keep <code>hazard_control = NULL</code> and
 pass a per-interval <code>hazard_treatment</code> vector).</li>
 <li><code>?survival_adapt</code> documents all arguments.</li>

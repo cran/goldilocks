@@ -1,7 +1,8 @@
 ## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  cache.path = "bayes-piecewise-cache/"
 )
 set.seed(7194)
 
@@ -9,7 +10,7 @@ set.seed(7194)
 library(goldilocks)
 
 ## ----hazards------------------------------------------------------------------
-cutpoints <- c(0, 6)         # one internal cut at 6 months -> two intervals
+cutpoints <- 6         # one internal cut at 6 months -> two intervals
 end_of_study <- 24
 
 hc <- prop_to_haz(probs = c(0.30, 0.50), cutpoints = cutpoints, endtime = end_of_study)
@@ -26,19 +27,39 @@ ppwe(hazard       = matrix(ht, nrow = 1),
      end_of_study = end_of_study)
 
 ## ----prior--------------------------------------------------------------------
-prior <- c(0.1, 0.1)   # shape and rate of the Gamma prior on each lambda_j
+prior_surv <- c(0.1, 0.1) # shape and rate for each lambda_j
+
+## ----simulated-data-example---------------------------------------------------
+set.seed(7195)
+
+example_trial_data <- sim_comp_data(
+  hazard_treatment = ht,
+  hazard_control = hc,
+  cutpoints = cutpoints,
+  N_total = 12,
+  lambda = 5,
+  lambda_time = NULL,
+  end_of_study = end_of_study,
+  block = 4,
+  rand_ratio = c(1, 1),
+  prop_loss = 0.05
+)
+
+knitr::kable(head(example_trial_data), digits = 2)
 
 ## ----run_one_trial, cache=TRUE------------------------------------------------
+set.seed(7194)
+
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = hc,
   cutpoints        = cutpoints,
   N_total          = 100,
-  lambda           = 5,                # enrolments per month
-  lambda_time      = 0,                # constant accrual rate
+  lambda           = 5,                # enrollments per month
+  lambda_time      = NULL,             # no internal enrollment-rate knots
   interim_look     = 60,
   end_of_study     = end_of_study,
-  prior            = prior,
+  prior_surv       = prior_surv,
   block            = 4,
   rand_ratio       = c(1, 1),
   prop_loss        = 0.05,
@@ -49,7 +70,7 @@ out <- survival_adapt(
   prob_ha          = 0.975,
   N_impute         = 50,
   N_mcmc           = 2000,
-  method           = "bayes")
+  method           = "bayes-surv")
 
 out
 
@@ -60,13 +81,13 @@ out
 # out_flat <- survival_adapt(
 #   hazard_treatment = ht_flat,
 #   hazard_control   = hc_flat,
-#   cutpoints        = 0,
+#   cutpoints        = NULL,
 #   N_total          = 100,
 #   lambda           = 5,
-#   lambda_time      = 0,
+#   lambda_time      = NULL,
 #   interim_look     = 60,
 #   end_of_study     = end_of_study,
-#   prior            = prior,
+#   prior_surv       = prior_surv,
 #   block            = 4,
 #   rand_ratio       = c(1, 1),
 #   prop_loss        = 0.05,
@@ -77,5 +98,5 @@ out
 #   prob_ha          = 0.975,
 #   N_impute         = 50,
 #   N_mcmc           = 2000,
-#   method           = "bayes")
+#   method           = "bayes-surv")
 

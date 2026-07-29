@@ -2,19 +2,20 @@
 % Please edit documentation in R/survival_adapt.R
 \name{survival_adapt}
 \alias{survival_adapt}
-\title{Simulate and execute a single adaptive clinical trial design with a
-time-to-event endpoint}
+\title{Simulate and analyze one Goldilocks adaptive trial}
 \usage{
 survival_adapt(
   hazard_treatment,
   hazard_control = NULL,
-  cutpoints = 0,
+  cutpoints = NULL,
   N_total,
   lambda = 0.3,
-  lambda_time = 0,
+  lambda_time = NULL,
   interim_look = NULL,
   end_of_study,
-  prior = c(0.1, 0.1),
+  prior_surv = c(0.1, 0.1),
+  prior_bin = c(1, 1),
+  bin_method = "mc",
   block = 2,
   rand_ratio = c(1, 1),
   prop_loss = 0,
@@ -25,56 +26,72 @@ survival_adapt(
   prob_ha = 0.95,
   N_impute = 10,
   N_mcmc = 10,
+  empty_interval = c("propagate", "prior", "error"),
   method = "logrank",
-  imputed_final = FALSE
+  imputed_final = FALSE,
+  return_trace = FALSE,
+  binary_imputation = c("event-time", "bernoulli"),
+  prior_surv_final = prior_surv
 )
 }
 \arguments{
-\item{hazard_treatment}{vector. Constant hazard rates under the treatment
-arm.}
+\item{hazard_treatment}{vector. Finite non-negative constant hazard rates
+under the treatment arm.}
 
-\item{hazard_control}{vector. Constant hazard rates under the control arm.}
+\item{hazard_control}{vector. Finite non-negative constant hazard rates
+under the control arm.}
 
-\item{cutpoints}{vector. Times at which the baseline hazard changes. Default
-is \code{cutpoints = 0}, which corresponds to a simple (non-piecewise)
-exponential model.}
+\item{cutpoints}{finite, positive, strictly increasing interior times at
+which the baseline hazard changes. The number of hazards for each arm must
+be one greater than the number of cutpoints. Default is \code{NULL}, which
+corresponds to a simple (non-piecewise) exponential model.}
 
 \item{N_total}{integer. Maximum sample size allowable}
 
-\item{lambda}{vector. Enrollment rates across simulated enrollment times. See
-\code{\link{enrollment}} for more details.}
+\item{lambda}{finite positive enrollment rates per unit time. Supply one rate
+for each interval defined by \code{lambda_time}. See \code{\link[=enrollment]{enrollment()}} for the
+precise continuous-time process and time-origin convention.}
 
-\item{lambda_time}{vector. Enrollment time(s) at which the enrollment rates
-change. Must be same length as lambda. See \code{\link{enrollment}} for
-more details.}
+\item{lambda_time}{\code{NULL}, or finite, positive, strictly increasing internal
+times at which the enrollment rate changes. The initial boundary at zero
+is implicit, so \code{length(lambda)} must equal \code{length(lambda_time) + 1}.}
 
 \item{interim_look}{vector. Sample size for each interim look. Note: the
 maximum sample size should not be included. For two-arm designs, each
 interim look must be at least the (largest) block size (see \code{block}),
-ensuring both treatment arms are present at every interim analysis; a
-smaller look could enrol subjects from a single arm only, leaving the
-interim posterior undefined for the missing arm.}
+ensuring both treatment groups are present at every interim analysis; a
+smaller look could enroll subjects from one treatment group only, leaving
+the interim posterior undefined for the missing group.}
 
-\item{end_of_study}{scalar. Length of the study; i.e. time at which endpoint
-will be evaluated.}
+\item{end_of_study}{finite study endpoint, strictly greater than the last
+cutpoint.}
 
-\item{prior}{vector. The prior distributions for the piecewise hazard rate
-parameters are each \eqn{Gamma(a_0, b_0)}, where \eqn{a_0} is the shape
-parameter and \eqn{b_0} is the rate parameter (i.e., the inverse of the
-scale). This follows R's \code{\link[stats]{rgamma}} parameterization. The
-same prior is applied to all piecewise intervals and to both treatment
-arms. The default non-informative prior distribution used is
-\code{Gamma(0.1, 0.1)}, which is specified by setting \code{prior = c(0.1,
-  0.1)}.}
+\item{prior_surv}{numeric vector or matrix. Gamma prior for the
+piecewise-exponential hazards used during interim prediction. A length-two
+vector supplies shape and rate and is broadcast across all intervals. A
+\code{2} by \code{length(cutpoints) + 1} matrix supplies interval-specific values,
+with shapes in row 1, rates in row 2, and columns ordered from the earliest
+to the latest interval. The same interval prior is applied to both
+treatment groups. Rates must use the same time unit as event times,
+exposure, and cutpoints. The default is \code{c(0.1, 0.1)}.}
+
+\item{prior_bin}{vector. Prior distribution for the event probability when
+\code{method = "bayes-bin"}. The two values are the shape parameters of the
+\code{Beta(a, b)} prior. The same prior is applied to both treatment arms.}
+
+\item{bin_method}{character. Method used to calculate the posterior
+probability for \code{method = "bayes-bin"}, must be one of \code{"mc"} (Monte Carlo
+sampling), \code{"normal"} (normal approximation), or \code{"quadrature"} (numerical
+integration). The default is \code{"mc"}.}
 
 \item{block}{scalar. Block size for generating the randomization schedule.}
 
 \item{rand_ratio}{vector. Randomization allocation for the ratio of control
 to treatment. Integer values mapping the size of the block. See
-\code{\link{randomization}} for more details.}
+\code{\link[=randomization]{randomization()}} for more details.}
 
 \item{prop_loss}{scalar. Overall proportion of subjects lost to follow-up.
-Subjects are selected at random for LTFU regardless of treatment arm or
+Subjects are selected at random for LTFU regardless of treatment assignment or
 event status. Each LTFU subject's observed time is drawn from a
 \code{Uniform(0, t)} distribution, where \code{t} is their potential
 event or censoring time. Since the LTFU time is always less than
@@ -83,90 +100,138 @@ right-censored. Defaults to zero.}
 
 \item{alternative}{character. The string specifying the alternative
 hypothesis, must be one of \code{"greater"} (default), \code{"less"} or
-\code{"two.sided"}. All three options are supported for \code{method =
-  "bayes"}, \code{"logrank"}, and \code{"cox"}. The chi-square test
-(\code{method = "chisq"}) only supports \code{"two.sided"}. For survival
-outcomes, \code{"less"} corresponds to the treatment group having a lower
+\code{"two.sided"}. One-sided alternatives (\code{"greater"} and \code{"less"}) are
+supported for \code{method = "bayes-surv"} and \code{method = "bayes-bin"}. All three
+options are supported for \code{method = "logrank"}, \code{method = "cox"}, and
+\code{method = "riskdiff"}. For
+survival outcomes, \code{"less"} corresponds to the treatment arm having a lower
 cumulative incidence (i.e., treatment is beneficial), and \code{"greater"}
-corresponds to the treatment group having a higher cumulative incidence.}
+corresponds to the treatment arm having a higher cumulative incidence.}
 
-\item{h0}{scalar. Null hypothesis value of \eqn{p_\textrm{treatment} -
-  p_\textrm{control}} when \code{method = "bayes"}. Default is \code{h0 = 0}.
-The argument is ignored when \code{method = "logrank"} or \code{= "cox"};
-in those cases the usual test of non-equal hazards is assumed.}
+\item{h0}{single finite numeric null hypothesis value or margin. Default is
+\code{h0 = 0}. For Bayesian analyses, \code{h0} must lie in \verb{[0, 1]} for a
+single-arm design and \verb{[-1, 1]} for a two-arm design.
+\itemize{
+\item When \code{method = "bayes-surv"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}}. In a single-arm design,
+\code{h0} is the external benchmark event probability, often referred to
+as a performance goal (PG) or objective performance criterion (OPC).
+\item When \code{method = "bayes-bin"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}} for a two-arm design, or
+the null event probability for a single-arm design.
+\item When \code{method = "cox"}, \code{h0} is the null log hazard ratio for
+treatment versus control. Use \code{h0 = 0} for the usual hazard ratio
+of 1 null, or \code{h0 = log(margin)} for a non-inferiority margin
+specified as a hazard ratio. A Cox non-inferiority test should usually
+use \code{alternative = "less"}.
+\item When \code{method = "riskdiff"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}} and must lie in
+\verb{[-1, 1]}.
+\item The argument is ignored for \code{method = "logrank"} after its finite-value
+validation; the usual equal-survival null hypothesis is used.
+}}
 
-\item{Fn}{vector of \code{[0, 1]} values. Each element is the probability
+\item{Fn}{vector of values between 0 and 1. Each element is the probability
 threshold to stop at the \eqn{i}-th look early for futility. If there are
 no interim looks (i.e. \code{interim_look = NULL}), then \code{Fn} is not
-used in the simulations or analysis. The length of \code{Fn} should be the
-same as \code{interim_look}, else the values are recycled.}
+used in the simulations or analysis. Set \code{Fn = 0} to disable futility
+monitoring. The length of \code{Fn} should be the same as
+\code{interim_look}, else the values are recycled.}
 
-\item{Sn}{vector of \code{[0, 1]} values. Each element is the probability
+\item{Sn}{vector of values between 0 and 1. Each element is the probability
 threshold to stop at the \eqn{i}-th look early for expected success. If
 there are no interim looks (i.e. \code{interim_look = NULL}), then
 \code{Sn} is not used in the simulations or analysis. The length of
 \code{Sn} should be the same as \code{interim_look}, else the values are
 recycled.}
 
-\item{prob_ha}{scalar \code{[0, 1]}. Probability threshold of alternative
+\item{prob_ha}{scalar value between 0 and 1. Probability threshold of alternative
 hypothesis.}
 
 \item{N_impute}{integer. Number of imputations for Monte Carlo simulation of
-missing data.}
+missing data. An imputed Cox or risk-difference final analysis requires at
+least two.}
 
-\item{N_mcmc}{integer. Number of samples to draw from the posterior
-distribution when using a Bayesian test (\code{method = "bayes"}).}
+\item{N_mcmc}{integer. Number of posterior samples used by
+\code{method = "bayes-surv"} and by \code{method = "bayes-bin"} when
+\code{bin_method = "mc"}.}
+
+\item{empty_interval}{character. Policy for empty piecewise-exponential
+intervals in \code{method = "bayes-surv"} posterior calculations. An empty
+interval is an interval with no exposed subjects in a treatment arm at the
+analysis time. \code{"propagate"} (the default, matching earlier package
+behavior) copies exposure time and event counts from the nearest non-empty
+interval in the same treatment arm and emits a warning. \code{"prior"} leaves
+the interval at zero exposure time and zero events, so its posterior is
+driven only by its assigned survival prior. \code{"error"} stops when any empty
+interval is found.}
 
 \item{method}{character. For an imputed data set (or the final data set after
 follow-up is complete), whether the analysis should be a log-rank
 (\code{method = "logrank"}) test, Cox proportional hazards regression model
-Wald test (\code{method = "cox"}), a fully-Bayesian analysis (\code{method
-  = "bayes"}), or a chi-square test (\code{method = "chisq"}). See Details
-section.}
+Wald test (\code{method = "cox"}), a fully-Bayesian piecewise-exponential
+analysis (\code{method = "bayes-surv"}), a Bayesian beta-binomial analysis of
+complete binary outcomes (\code{method = "bayes-bin"}), or a frequentist
+risk-difference Wald test of complete binary outcomes (\code{method = "riskdiff"}). See Details section.}
 
 \item{imputed_final}{logical. Should the final analysis (after all subjects
 have been followed-up to the study end) be based on imputed outcomes for
-subjects who were LTFU (i.e. right-censored with time
-\code{<end_of_study})? Default is \code{TRUE}. Setting to \code{FALSE}
-means that the final analysis would incorporate right-censoring.}
+subjects who were LTFU (i.e. right-censored with time less than
+\code{end_of_study})? Default is \code{FALSE}, which means that the final analysis
+incorporates right-censoring. With \code{method = "cox"} or \code{method = "riskdiff"}, setting this to \code{TRUE} analyzes each imputed dataset and pools
+the scalar treatment effects and variances using Rubin's rules; this
+requires \code{N_impute >= 2}. Imputed final analyses remain unavailable for
+\code{method = "logrank"}.}
+
+\item{return_trace}{logical. Should the interim decision path be returned in
+addition to the usual final summary? The default, FALSE, returns the
+historical one-row data frame. When TRUE, the result is a
+goldilocks_trial object with summary, trace, and call elements.}
+
+\item{binary_imputation}{character. Predictive imputation approach for
+\code{method = "bayes-bin"} or \code{method = "riskdiff"}. \code{"event-time"} (the default)
+draws a conditional piecewise-exponential event time and reduces it to
+event status at \code{end_of_study}. \code{"bernoulli"} draws the endpoint status
+directly from its conditional event probability. This argument is ignored
+for time-to-event analysis methods.}
+
+\item{prior_surv_final}{numeric vector or matrix. Gamma prior used for
+final-stage piecewise-exponential imputation and, for \code{method = "bayes-surv"}, final analysis. It accepts the same forms as \code{prior_surv}
+and defaults to \code{prior_surv}, preserving the historical behavior.}
 }
 \value{
-A data frame containing some input parameters (arguments) as well as
-statistics from the analysis, including:
-
-\describe{
-\item{\code{N_treatment:}}{
-integer. The number of patients enrolled in the treatment arm for
-each simulation.}
-\item{\code{N_control:}}{
-integer. The number of patients enrolled in the control arm for
-each simulation.}
-\item{\code{est_final:}}{
-scalar. The treatment effect that was estimated at the final analysis.
-Final analysis occurs when either the maximum sample size is reached
-and follow-up complete, or the interim analysis triggered an early
-stopping of enrollment/accrual and follow-up for those subjects is
-complete.}
-\item{\code{post_prob_ha:}}{
-scalar. The corresponding posterior probability from the final
-analysis. If \code{imputed_final} is true, this is calculated as the
-posterior probability of efficacy (or equivalent, depending on how
-\code{alternative:} and \code{h0} were specified) for each imputed
-final analysis dataset, and then averaged over the \code{N_impute}
-imputations. If \code{method = "logrank"}, \code{post_prob_ha} is
-calculated in the same fashion, but value represents \eqn{1 - P},
-where \eqn{P} denotes the frequentist \eqn{P}-value.}
-\item{\code{stop_futility:}}{
-integer. A logical indicator of whether the trial was stopped early for
-futility.}
-\item{\code{stop_expected_success:}}{
-integer. A logical indicator of whether the trial was stopped early for
-expected success.}
+With return_trace = FALSE (the default), a data frame containing
+some input parameters (arguments) as well as statistics from the analysis,
+including:
+\itemize{
+\item \code{N_treatment}: Number of patients enrolled in the treatment arm.
+\item \code{N_control}: Number of patients enrolled in the control arm.
+\item \code{est_final}: Treatment effect estimated at the final analysis. The final
+analysis occurs when either the maximum sample size is reached and
+follow-up is complete, or the interim analysis triggered early stopping
+of enrollment/accrual and follow-up for those subjects is complete.
+\item \code{post_prob_ha}: Posterior probability from the final analysis. If
+a Bayesian method uses \code{imputed_final = TRUE}, this is calculated for
+each imputed final-analysis dataset and averaged over \code{N_impute}
+imputations. For an imputed Cox analysis it is \eqn{1 - P} from the
+Rubin-pooled Wald test. The same interpretation applies to imputed
+risk-difference analyses. For non-imputed frequentist analyses it is
+\eqn{1 - P} from the corresponding test.
+\item \code{stop_futility}: Logical indicator of whether the trial stopped early for
+futility.
+\item \code{stop_expected_success}: Logical indicator of whether the trial stopped
+early for expected success.
 }
+
+With return_trace = TRUE, a goldilocks_trial object is returned. Its
+summary element is the same data frame and its trace element has one row
+per interim look. The trace records enrollment and observed events by arm,
+predictive probabilities and their thresholds, the decision taken, and
+warnings raised during that look. It deliberately excludes imputed data
+sets and posterior draws to keep the output compact.
 }
 \description{
-Simulate and execute a single adaptive clinical trial design with a
-time-to-event endpoint
+Simulate and analyze one Goldilocks adaptive trial
 }
 \details{
 Implements the Goldilocks design method described in Broglio et al.
@@ -214,68 +279,127 @@ one-sided \emph{P}-value is computed from the log-rank z-statistic.
 Similar to the log-rank test, a \emph{P}-value is calculated and
 \eqn{1 - P} is reported in \code{post_prob_ha}. When
 \code{alternative = "two.sided"}, the standard two-sided Wald
-\emph{P}-value is used. When \code{alternative = "less"} or
+\emph{P}-value is used when \code{h0 = 0}. For other values of
+\code{h0}, the Wald test is centered on the specified null log hazard
+ratio. When \code{alternative = "less"} or
 \code{"greater"}, a one-sided \emph{P}-value is derived from the Wald
-z-statistic. The treatment effect (log hazard ratio) is also reported.
-\item Bayesian absolute difference (\code{method = "bayes"}).
+z-statistic relative to \code{h0}. The treatment effect (log hazard
+ratio) is also reported. When \code{imputed_final = TRUE}, the Cox model is
+fitted separately to each of at least two imputed datasets. The log
+hazard ratios and their within-imputation variances are combined using
+Rubin's rules; the pooled Wald test uses Rubin's large-sample degrees of
+freedom. When \code{imputed_final = FALSE}, the existing single Cox model is
+fitted directly to the observed right-censored data.
+\item Bayesian absolute difference (\code{method = "bayes-surv"}).
 Each imputed dataset is used to update the conjugate Gamma prior
-(defined by \code{prior}), yielding a posterior distribution for the
+(defined by \code{prior_surv} at interim looks and \code{prior_surv_final} at the
+final stage), yielding a posterior distribution for the
 piecewise exponential rate parameters. In turn, the posterior
 distribution of the cumulative incidence function (\eqn{1 - S(t)}, where
 \eqn{S(t)} is the survival function) evaluated at time
-\code{end_of_study} is calculated. If a single arm study, then this
+\code{end_of_study} is calculated. If a single-arm study, then this
 summarizes the treatment effect, else, if a two-armed study, the
 independent posteriors are used to estimate the posterior distribution
-of the difference. A posterior probability is calculated according to
-the specification of the test type (\code{alternative}) and the value of
-the null hypothesis (\code{h0}).
-\item Chi-square test (\code{method = "chisq"}).
-Each (imputed) dataset with both treatment and control arms can be
-compared using a standard chi-square test on the final event status,
-which discards the event time information. The output is a
-\emph{P}-value, and there is no treatment effect reported. The function
-returns \eqn{1 - P}, which is reported in \code{post_prob_ha}. Whilst
-not a posterior probability, it can be contrasted in the same manner.
-For example, if the success threshold is \eqn{P < 0.05}, then one
-requires \code{post_prob_ha} \eqn{> 0.95}. The reason for this is to
-enable simple switching between Bayesian and frequentist paradigms for
-analysis. Because the chi-square test cannot handle right-censored
-observations, subjects lost to follow-up are excluded from the final
-analysis when \code{imputed_final = FALSE}. When
-\code{imputed_final = TRUE}, LTFU subjects are imputed before the
-test is applied, so all subjects are included.
+of the difference. A posterior probability is calculated according to the
+specification of the test type (\code{alternative}) and the value of the null
+hypothesis (\code{h0}).
+
+For piecewise-exponential analyses, an interim or final dataset may
+contain intervals with no exposed subjects in one treatment arm,
+especially when later cutpoints occur after the available follow-up at
+early looks. The \code{empty_interval} argument controls this case.
+The default, \code{"propagate"}, preserves historical package behavior by
+borrowing sufficient statistics from the nearest non-empty interval
+within the same treatment arm. This is operationally stable but
+statistically consequential because the empty interval's posterior is
+informed by adjacent observed data. \code{"prior"} instead leaves the empty
+interval prior-driven, making the absence of interval data explicit.
+\code{"error"} is strict and stops the simulation or analysis when an empty
+interval is encountered.
+\item Bayesian beta-binomial analysis (\code{method = "bayes-bin"}).
+Each complete or imputed dataset is reduced to binary event outcomes at
+\code{end_of_study}. A conjugate \code{Beta(a, b)} prior, specified with
+\code{prior_bin}, is updated with the number of events and non-events in
+each arm. In a single-arm study, inference is based on the posterior
+event probability. In a two-arm study, inference is based on
+\eqn{p_\textrm{treatment} - p_\textrm{control}}. This posterior
+probability can be calculated using Monte Carlo beta draws
+(\code{bin_method = "mc"}), a normal approximation (\code{"normal"}), or numerical
+quadrature (\code{"quadrature"}). Like the risk-difference test, this method
+requires complete binary outcomes: censored subjects must either be
+followed to \code{end_of_study}, imputed, or excluded when
+\code{imputed_final = FALSE}.
+
+Two equivalent predictive imputation approaches are available through
+\code{binary_imputation}. With \code{"event-time"}, the package samples a future
+event time conditional on the available event-free follow-up and then
+records whether it falls by \code{end_of_study}. With \code{"bernoulli"}, it
+calculates the same endpoint probability directly. If \eqn{T} is the
+observed event-free follow-up, \eqn{T^*} is \code{end_of_study},
+\eqn{S(t)} is the survival function, and \eqn{H(t)} is the cumulative
+hazard, that probability is
+
+\deqn{\Pr(X = 1 \mid T_\mathrm{event} > T)
+       = \frac{S(T) - S(T^*)}{S(T)}
+       = 1 - \exp\{-[H(T^*) - H(T)]\}.}
+
+A Bernoulli outcome is drawn with this probability. For a subject not
+yet enrolled, \eqn{T = 0}; observed events are retained unchanged.
+Because no precise event time is generated, the imputed \code{time} is set
+to \code{end_of_study} and only the binary \code{event} status is analyzed. Each
+imputation still uses a sampled posterior hazard draw, so uncertainty
+in the piecewise-exponential model is retained.
+\item Frequentist risk difference (\code{method = "riskdiff"}).
+Each complete or imputed dataset is reduced to binary event outcomes at
+\code{end_of_study}. The estimated treatment effect is
+\eqn{p_\textrm{treatment} - p_\textrm{control}}, with an unpooled
+binomial variance. A Wald test compares this estimate with \code{h0}, and
+\eqn{1 - P} is reported in \code{post_prob_ha}. All three alternatives are
+supported. Because the test requires complete binary outcomes,
+lost-to-follow-up subjects are excluded when \code{imputed_final = FALSE}.
+When \code{imputed_final = TRUE}, estimates and within-imputation variances
+from at least two completed datasets are combined using Rubin's rules.
 \item Imputed final analysis (\code{imputed_final}).
 The overall final analysis conducted after accrual is suspended and
-follow-up is complete can be analyzed on imputed datasets (default) or
-on the non-imputed dataset. Since the imputations/predictions used
+follow-up is complete can be analyzed on imputed datasets for Bayesian
+methods (\code{"bayes-surv"} and \code{"bayes-bin"}), Cox regression, and the
+frequentist risk-difference analysis, or on the non-imputed dataset.
+Since the imputations/predictions used
 during the interim analyses assume all subjects are imputed (since loss
 to follow-up is not yet known), it would seem most appropriate to
 conduct the trial in the same manner, especially if loss to follow-up
 rates are appreciable. Note, this only applies to subjects who are
 right-censored due to loss to follow-up, which we assume is a
-non-informative process. This can be used with any \code{method}.
+non-informative process. For Cox regression the final estimates and
+variances are pooled with Rubin's rules. It cannot be used with
+\code{method = "logrank"}.
 }
 
-When \code{method = "bayes"} and imputation is involved (either at interim
+When \code{method = "bayes-surv"} or \code{method = "bayes-bin"} and imputation is
+involved (either at interim
 analyses or via \code{imputed_final = TRUE}), a two-stage posterior
 procedure is used. First, the posterior distribution of the piecewise
 hazard rates is estimated from the \emph{observed} data and used to draw
-imputed event times for censored subjects. Second, a \emph{new} posterior
-is estimated from the combined observed and imputed data, and this
-posterior is used for inference. This is consistent with the predictive
-probability framework described in Broglio et al. (2014), but users
-should be aware that the imputation model's posterior influences the
-analysis posterior. For frequentist methods (\code{"logrank"},
-\code{"cox"}, \code{"chisq"}), the second stage uses a standard test
-rather than a posterior, so this feedback loop does not arise.
+imputed event times for censored subjects. Second, a \emph{new} posterior is
+estimated from the combined observed and imputed data: the
+piecewise-exponential posterior for \code{method = "bayes-surv"} or the beta
+posterior for \code{method = "bayes-bin"}. This posterior is used for
+inference. This is consistent with the predictive probability framework
+described in Broglio et al. (2014), but users should be aware that the
+imputation model's posterior influences the analysis posterior. For
+frequentist methods (\code{"logrank"}, \code{"cox"}, \code{"riskdiff"}), each completed
+dataset uses a standard test rather than a posterior, so this feedback loop
+does not arise. Imputed Cox final analyses then pool the completed-data
+estimates and variances using Rubin's rules. Imputed risk-difference final
+analyses use the same scalar combining rule.
 
 At each interim look, follow-up times are masked (censored) to reflect
-the calendar time of the analysis. Subjects enrolled at the exact interim
-boundary have zero follow-up time, which is incompatible with
-\code{\link[survival]{survSplit}}. These times are clamped to
+the calendar time of the analysis. The package treats enrollment and
+randomization as occurring at the same time. Subjects enrolled at the exact
+interim boundary have zero follow-up time. These times are clamped to
 \code{.Machine$double.eps} (approximately \eqn{2.2 \times 10^{-16}}) so
-that they contribute negligible but non-zero exposure. This affects at
-most one subject per interim look.
+that they contribute negligible but non-zero exposure to the interim
+posterior. This affects at most one subject per interim look.
 }
 \examples{
 # RCT with exponential hazard (no piecewise breaks)
@@ -284,13 +408,13 @@ most one subject per interim look.
 survival_adapt(
  hazard_treatment = -log(0.85) / 36,
  hazard_control = -log(0.7) / 36,
- cutpoints = 0,
+ cutpoints = NULL,
  N_total = 600,
  lambda = 20,
- lambda_time = 0,
+ lambda_time = NULL,
  interim_look = 400,
  end_of_study = 36,
- prior = c(0.1, 0.1),
+ prior_surv = c(0.1, 0.1),
  block = 2,
  rand_ratio = c(1, 1),
  prop_loss = 0.30,
@@ -301,10 +425,10 @@ survival_adapt(
  prob_ha = 0.975,
  N_impute = 10,
  N_mcmc = 10,
- method = "bayes")
+ method = "bayes-surv")
 }
 \references{
 Broglio KR, Connor JT, Berry SM. Not too big, not too small: a Goldilocks
-approach to sample size selection. \emph{Journal of Biopharmaceutical
-Statistics}, 2014; 24(3): 685–705.
+approach to sample size selection. \emph{Journal of Biopharmaceutical Statistics},
+2014; 24(3): 685–705.
 }

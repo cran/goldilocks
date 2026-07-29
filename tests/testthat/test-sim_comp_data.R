@@ -3,15 +3,35 @@ test_that("sim_comp_data returns data frame with correct columns (two-arm)", {
   out <- sim_comp_data(
     hazard_treatment = 0.01,
     hazard_control = 0.02,
-    cutpoints = 0,
+    cutpoints = NULL,
     N_total = 50,
     lambda = 5,
-    lambda_time = 0,
+    lambda_time = NULL,
     end_of_study = 36
   )
   expect_s3_class(out, "data.frame")
   expect_equal(nrow(out), 50)
-  expect_named(out, c("time", "treatment", "event", "enrollment", "id", "loss_to_fu"))
+  expect_named(
+    out,
+    c("time", "treatment", "event", "enrollment", "id", "loss_to_fu")
+  )
+  expect_equal(out$enrollment[1], 0)
+  expect_true(all(diff(out$enrollment) > 0))
+  expect_true(any(out$enrollment[-1] != floor(out$enrollment[-1])))
+})
+
+test_that("sim_comp_data accepts internal enrollment-rate knots", {
+  set.seed(5419)
+  out <- sim_comp_data(
+    hazard_treatment = 0.01,
+    N_total = 40,
+    lambda = c(2, 5),
+    lambda_time = 2.5,
+    end_of_study = 36
+  )
+
+  expect_equal(out$enrollment[1], 0)
+  expect_true(all(diff(out$enrollment) > 0))
 })
 
 test_that("sim_comp_data returns correct columns for single-arm", {
@@ -19,10 +39,10 @@ test_that("sim_comp_data returns correct columns for single-arm", {
   out <- sim_comp_data(
     hazard_treatment = 0.01,
     hazard_control = NULL,
-    cutpoints = 0,
+    cutpoints = NULL,
     N_total = 30,
     lambda = 5,
-    lambda_time = 0,
+    lambda_time = NULL,
     end_of_study = 36
   )
   expect_equal(nrow(out), 30)
@@ -34,10 +54,10 @@ test_that("sim_comp_data applies loss to follow-up", {
   out <- sim_comp_data(
     hazard_treatment = 0.01,
     hazard_control = 0.02,
-    cutpoints = 0,
+    cutpoints = NULL,
     N_total = 200,
     lambda = 20,
-    lambda_time = 0,
+    lambda_time = NULL,
     end_of_study = 36,
     prop_loss = 0.30
   )
@@ -52,10 +72,10 @@ test_that("sim_comp_data has no loss to follow-up by default", {
   out <- sim_comp_data(
     hazard_treatment = 0.01,
     hazard_control = 0.02,
-    cutpoints = 0,
+    cutpoints = NULL,
     N_total = 50,
     lambda = 5,
-    lambda_time = 0,
+    lambda_time = NULL,
     end_of_study = 36
   )
   expect_true(all(!out$loss_to_fu))
@@ -66,12 +86,92 @@ test_that("sim_comp_data works with piecewise hazard", {
   out <- sim_comp_data(
     hazard_treatment = c(0.005, 0.01),
     hazard_control = c(0.01, 0.02),
-    cutpoints = c(0, 12),
+    cutpoints = 12,
     N_total = 80,
     lambda = 10,
-    lambda_time = 0,
+    lambda_time = NULL,
     end_of_study = 36
   )
   expect_equal(nrow(out), 80)
   expect_true(all(out$time > 0))
+})
+
+test_that("sim_comp_data validates counts and loss-to-follow-up probability", {
+  expect_error(
+    sim_comp_data(
+      hazard_treatment = 0.01,
+      hazard_control = 0.02,
+      cutpoints = NULL,
+      N_total = 50.5,
+      lambda = 5,
+      lambda_time = NULL,
+      end_of_study = 36
+    ),
+    "N_total"
+  )
+
+  expect_error(
+    sim_comp_data(
+      hazard_treatment = 0.01,
+      hazard_control = 0.02,
+      cutpoints = NULL,
+      N_total = 50,
+      lambda = 5,
+      lambda_time = NULL,
+      end_of_study = 36,
+      prop_loss = -0.1
+    ),
+    "prop_loss"
+  )
+})
+
+test_that("sim_comp_data validates treatment-arm hazards", {
+  common_args <- list(
+    hazard_treatment = 0.01,
+    hazard_control = 0.02,
+    cutpoints = NULL,
+    N_total = 50,
+    lambda = 5,
+    lambda_time = NULL,
+    end_of_study = 36
+  )
+
+  expect_error(
+    do.call(
+      sim_comp_data,
+      modifyList(common_args, list(hazard_treatment = Inf))
+    ),
+    "hazard_treatment"
+  )
+  expect_error(
+    do.call(
+      sim_comp_data,
+      modifyList(common_args, list(hazard_control = NA_real_))
+    ),
+    "hazard_control"
+  )
+})
+
+test_that("sim_comp_data validates the complete piecewise model", {
+  common_args <- list(
+    hazard_treatment = c(0.01, 0.02),
+    hazard_control = c(0.02, 0.03),
+    cutpoints = 12,
+    N_total = 50,
+    lambda = 5,
+    lambda_time = NULL,
+    end_of_study = 36
+  )
+
+  expect_error(
+    do.call(sim_comp_data, modifyList(common_args, list(cutpoints = 100))),
+    "end_of_study"
+  )
+  expect_error(
+    do.call(
+      sim_comp_data,
+      modifyList(common_args, list(cutpoints = c(12, 12)))
+    ),
+    "strictly increasing"
+  )
 })

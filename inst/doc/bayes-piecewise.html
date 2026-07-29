@@ -12,7 +12,7 @@
 
 
 
-<title>Bayesian decisions with piecewise-exponential hazards</title>
+<title>Bayesian piecewise-exponential designs</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -337,24 +337,24 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">Bayesian decisions with
-piecewise-exponential hazards</h1>
+<h1 class="title toc-ignore">Bayesian piecewise-exponential designs</h1>
 
 
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
-<p>The “Example: Two-armed RCT” vignette uses
-<code>method = &quot;logrank&quot;</code> and a single constant hazard per arm.
-That is convenient when the proportional-hazards assumption is
-reasonable and the underlying event rate is well-approximated by an
-exponential distribution. In practice, neither assumption always holds.
-This vignette shows how to set up a Goldilocks design with:</p>
+<p>The “Two-arm randomized trials” vignette uses
+<code>method = &quot;logrank&quot;</code> and a single constant hazard for each
+treatment group. That is convenient when the proportional-hazards
+assumption is reasonable and the underlying event rate is
+well-approximated by an exponential distribution. In practice, neither
+assumption always holds. This vignette shows how to set up a Goldilocks
+design with:</p>
 <ul>
 <li>a <strong>piecewise-exponential</strong> hazard, in which the
 constant hazard rate changes at one or more cut-points; and</li>
 <li>a <strong>Bayesian decision rule</strong>
-(<code>method = &quot;bayes&quot;</code>) using a posterior probability threshold
-on the cumulative-failure-probability scale.</li>
+(<code>method = &quot;bayes-surv&quot;</code>) using a posterior probability
+threshold on the cumulative-failure-probability scale.</li>
 </ul>
 <p>We use a small example so that the simulation can be run while
 reading the vignette; the live <code>survival_adapt()</code> chunk takes
@@ -371,19 +371,17 @@ hazard for the early interval and another for everything afterwards.</p>
 <p>The package handles piecewise hazards through two related
 arguments:</p>
 <ul>
-<li><code>cutpoints</code>: the times at which the hazard changes. The
-first element must be <code>0</code> and represents the start of the
-first interval; subsequent elements are the <em>internal</em>
-cut-points. With <code>J</code> intervals there are <code>J</code>
-elements in <code>cutpoints</code> and <code>J</code> hazard pieces per
-arm. (So <code>cutpoints = c(0, 6)</code> produces <em>two</em>
-intervals, <code>[0, 6)</code> and <code>[6, \infty)</code>, in contrast
-to the default <code>cutpoints = 0</code> used in the “Two-armed RCT”
-vignette, which produces a single interval and a non-piecewise
-exponential.)</li>
+<li><code>cutpoints</code>: the positive interior times at which the
+hazard changes. With <span class="math inline">\(J - 1\)</span>
+cutpoints there are <span class="math inline">\(J\)</span> intervals and
+therefore <span class="math inline">\(J\)</span> hazard rates for each
+treatment group. For example, <code>cutpoints = 6</code> produces two
+intervals, <span class="math inline">\([0, 6)\)</span> and <span class="math inline">\([6, \infty)\)</span>. The default
+<code>cutpoints = NULL</code> supplies no change times and produces a
+single, constant hazard interval.</li>
 <li><code>hazard_treatment</code> and <code>hazard_control</code>:
-vectors of length <code>J</code> giving the constant hazard for each
-interval.</li>
+vectors of length <span class="math inline">\(J\)</span> giving the
+constant hazard for each interval.</li>
 </ul>
 <p>The helper <code>prop_to_haz()</code> maps cumulative event
 probabilities at given times into the corresponding piecewise
@@ -405,7 +403,7 @@ leaving the late-period hazard unchanged. Concretely, we target:</p>
 </ul>
 <p>We set the cut-point at 6 months and translate these proportions into
 piecewise hazards:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>cutpoints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">6</span>)         <span class="co"># one internal cut at 6 months -&gt; two intervals</span></span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>cutpoints <span class="ot">&lt;-</span> <span class="dv">6</span>         <span class="co"># one internal cut at 6 months -&gt; two intervals</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>end_of_study <span class="ot">&lt;-</span> <span class="dv">24</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>hc <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.30</span>, <span class="fl">0.50</span>), <span class="at">cutpoints =</span> cutpoints, <span class="at">endtime =</span> end_of_study)</span>
@@ -415,12 +413,12 @@ piecewise hazards:</p>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;             [,1]   [,2]</span></span>
 <span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; control   0.0594 0.0187</span></span>
 <span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; treatment 0.0331 0.0174</span></span></code></pre></div>
-<p>The first column is the hazard during <code>[0, 6)</code> months and
-the second column is the hazard from 6 months onward. Both arms have a
-higher hazard in the early window. We can sanity-check that the implied
-survival probabilities at 24 months match what we specified by running
-the cumulative incidence computation back through
-<code>ppwe()</code>:</p>
+<p>The first column is the hazard during <span class="math inline">\([0,
+6)\)</span> months and the second column is the hazard from 6 months
+onward. Both arms have a higher hazard in the early window. We can
+sanity-check that the implied survival probabilities at 24 months match
+what we specified by running the cumulative incidence computation back
+through <code>ppwe()</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">ppwe</span>(<span class="at">hazard       =</span> <span class="fu">matrix</span>(hc, <span class="at">nrow =</span> <span class="dv">1</span>),</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>     <span class="at">cutpoints    =</span> cutpoints,</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>     <span class="at">end_of_study =</span> end_of_study)</span>
@@ -433,14 +431,14 @@ the cumulative incidence computation back through
 </div>
 <div id="the-bayesian-decision-rule" class="section level2">
 <h2>The Bayesian decision rule</h2>
-<p>With <code>method = &quot;bayes&quot;</code>, <code>survival_adapt()</code>
-puts independent Gamma<span class="math inline">\((\alpha,
-\beta)\)</span> priors on each piecewise hazard rate (one per interval,
-per arm) and combines them with the observed exposure time and event
+<p>With <code>method = &quot;bayes-surv&quot;</code>,
+<code>survival_adapt()</code> puts independent <span class="math inline">\(\operatorname{Gamma}(\alpha, \beta)\)</span>
+priors on each piecewise hazard rate (one per interval, per treatment
+group) and combines them with the observed exposure time and event
 counts to obtain a closed-form Gamma posterior on each <span class="math inline">\(\lambda_j\)</span>. Posterior draws of <span class="math inline">\(\lambda_j\)</span> are pushed through the
 piecewise-exponential cumulative incidence function to obtain posterior
-draws of the cumulative-failure probability <span class="math inline">\(p\)</span> at <code>end_of_study</code> for each
-arm.</p>
+draws of the cumulative-failure probability <span class="math inline">\(p\)</span> at <code>end_of_study</code> for the
+treatment and control groups.</p>
 <p>The decision rule is one-sided. The treatment effect is defined
 as</p>
 <p><span class="math display">\[\Delta = p_{\text{treatment}} -
@@ -456,55 +454,167 @@ success at the final analysis when</p>
 \;&gt;\; \texttt{prob\_ha}.\)</span></p>
 <p>Because a beneficial treatment has a <em>lower</em> failure
 probability, <code>alternative = &quot;less&quot;</code> is the appropriate choice
-here. (<code>method = &quot;bayes&quot;</code> does not allow
+here. (<code>method = &quot;bayes-surv&quot;</code> does not allow
 <code>alternative = &quot;two.sided&quot;</code> – it raises an error.)</p>
-<p>The same posterior is also used at each interim look to compute the
-predictive probability of eventual success. Imputed completions are
-drawn from the posterior predictive distribution of the
-piecewise-exponential model for subjects still under follow-up, and the
-analysis is repeated on each imputed dataset. The fraction of
-imputations that would declare success at the maximum sample size is the
-predictive probability of success, which drives the futility and
-expected-success stopping rules through <code>Fn</code> and
-<code>Sn</code>.</p>
-<p>We use a weakly informative Gamma<span class="math inline">\((0.1,
-0.1)\)</span> prior on every hazard component:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>prior <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>)   <span class="co"># shape and rate of the Gamma prior on each lambda_j</span></span></code></pre></div>
+<p>The same posterior is also used at each interim look to compute
+predictive probabilities of success. Imputed completions are drawn from
+the posterior predictive distribution of the piecewise-exponential model
+for subjects still under follow-up, and the analysis is repeated on each
+imputed dataset. The fraction of imputations that would declare success
+after enrollment continues to the maximum sample size is compared with
+<code>Fn</code> for the futility rule. Separately, the fraction that
+would declare success after completing follow-up for the subjects
+currently enrolled is compared with <code>Sn</code> for the
+expected-success rule.</p>
+<p>We use an independent weakly informative <span class="math inline">\(\operatorname{Gamma}(0.1, 0.1)\)</span> prior on
+every hazard component:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>prior_surv <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>) <span class="co"># shape and rate for each lambda_j</span></span></code></pre></div>
+</div>
+<div id="what-a-simulated-trial-dataset-looks-like" class="section level2">
+<h2>What a simulated trial dataset looks like</h2>
+<p>Before running the adaptive design, it is helpful to inspect the
+subject-level data generated by <code>sim_comp_data()</code>. The
+following example uses the same hazards, follow-up horizon, and monthly
+time unit as the design below:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7195</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>example_trial_data <span class="ot">&lt;-</span> <span class="fu">sim_comp_data</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">hazard_control =</span> hc,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">cutpoints =</span> cutpoints,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">12</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">lambda =</span> <span class="dv">5</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">lambda_time =</span> <span class="cn">NULL</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">end_of_study =</span> end_of_study,</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">4</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="fl">0.05</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>)</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">head</span>(example_trial_data), <span class="at">digits =</span> <span class="dv">2</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">time</th>
+<th align="right">treatment</th>
+<th align="right">event</th>
+<th align="right">enrollment</th>
+<th align="right">id</th>
+<th align="left">loss_to_fu</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">24.00</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="right">3.61</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.34</td>
+<td align="right">2</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="right">1.90</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.35</td>
+<td align="right">3</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="right">4.58</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0.63</td>
+<td align="right">4</td>
+<td align="left">TRUE</td>
+</tr>
+<tr class="odd">
+<td align="right">19.77</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.72</td>
+<td align="right">5</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="right">3.10</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.80</td>
+<td align="right">6</td>
+<td align="left">FALSE</td>
+</tr>
+</tbody>
+</table>
+<p>Each row represents one simulated subject:</p>
+<ul>
+<li><code>time</code> is follow-up time from enrollment/randomization to
+the event or censoring, measured in months here.</li>
+<li><code>treatment</code> is the randomized arm: <code>1</code> for
+treatment and <code>0</code> for control.</li>
+<li><code>event</code> is <code>1</code> when the event was observed and
+<code>0</code> when follow-up was right-censored.</li>
+<li><code>enrollment</code> is trial-calendar time from first patient in
+to that subject’s enrollment, also measured in months here.</li>
+<li><code>id</code> is the subject’s simulated identifier.</li>
+<li><code>loss_to_fu</code> indicates whether the subject was censored
+because of simulated loss to follow-up.</li>
+</ul>
+<p>The <code>time</code> and <code>enrollment</code> columns therefore
+use the same unit but different clocks: <code>time</code> is
+subject-relative follow-up, whereas <code>enrollment</code> is
+trial-calendar time.</p>
 </div>
 <div id="a-single-simulated-trial" class="section level2">
 <h2>A single simulated trial</h2>
 <p>We will run one trial under the alternative hypothesis to illustrate
 the mechanics. We choose <code>interim_look = 60</code> (the minimum
 required is <code>max(block) = 4</code>) and a constant accrual rate of
-5 enrolments per month (<code>lambda_time = 0</code> keeps the rate
-constant; piecewise accrual is also supported).</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">hazard_control   =</span> hc,</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">cutpoints        =</span> cutpoints,</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">100</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,                <span class="co"># enrolments per month</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,                <span class="co"># constant accrual rate</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">60</span>,</span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">prior            =</span> prior,</span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">4</span>,</span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  <span class="at">h0               =</span> <span class="dv">0</span>,</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.975</span>,</span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a></span>
-<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>out</span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
-<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; 1          0.975      0        less          50        50        100   100</span></span>
-<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha   est_final ppp_success stop_futility stop_expected_success</span></span>
-<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; 1        0.556 -0.01536969         0.1             0                     0</span></span></code></pre></div>
+5 enrollments per month. With <code>lambda_time = NULL</code>, the first
+patient is placed at time zero and subsequent inter-arrival gaps are
+generated exactly from an exponential distribution with rate 5.
+Piecewise accrual is specified using positive internal knots only; for
+example, <code>lambda = c(2, 5)</code> and <code>lambda_time = 6</code>
+means 2 enrollments per month before month 6 and 5 thereafter. These
+calendar-time enrollment knots are distinct from the subject-follow-up
+hazard <code>cutpoints</code> used above.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7194</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">hazard_control   =</span> hc,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">cutpoints        =</span> cutpoints,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">100</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,                <span class="co"># enrollments per month</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="cn">NULL</span>,             <span class="co"># no internal enrollment-rate knots</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">60</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">prior_surv       =</span> prior_surv,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">4</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">h0               =</span> <span class="dv">0</span>,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.975</span>,</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes-surv&quot;</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>out</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; 1          0.975      0        less          50        50        100   100</span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha  est_final ppp_success stop_futility stop_expected_success</span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co">#&gt; 1        0.969 -0.1761562        0.12             0                     0</span></span></code></pre></div>
 <p>The output reports the posterior probability of the alternative at
 the final (or stopped) analysis (<code>post_prob_ha</code>), the
 posterior mean treatment effect on the cumulative-failure scale
@@ -518,19 +628,27 @@ early for futility or expected success.</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>Empty intervals at interim looks.</strong> Early interim
 looks may have no subjects with follow-up reaching the later piecewise
-intervals. The package handles this by propagating exposure time and
-event counts from the nearest non-empty interval <em>within the same
-arm</em>, and emits a warning when it does so. This supplies a
-placeholder Gamma posterior for an interval with no information; it is a
-fallback when an interim look has not yet generated follow-up in later
-intervals, not a substantive estimate of those intervals’ hazards. By
-the final analysis, all intervals will typically be populated.</p></li>
+intervals. The <code>empty_interval</code> argument controls how these
+intervals are handled. The default,
+<code>empty_interval = &quot;propagate&quot;</code>, preserves historical package
+behavior by propagating exposure time and event counts from the nearest
+non-empty interval <em>within the same treatment group</em>, and emits a
+warning when it does so. This supplies a placeholder Gamma posterior for
+an interval with no information; it is a fallback when an interim look
+has not yet generated follow-up in later intervals, not a substantive
+estimate of those intervals’ hazards. Use
+<code>empty_interval = &quot;prior&quot;</code> to leave such intervals at zero
+exposure and zero events, making their posteriors prior-driven, or
+<code>empty_interval = &quot;error&quot;</code> to stop the analysis whenever an
+empty interval is encountered. By the final analysis, all intervals will
+typically be populated.</p></li>
 <li><p><strong>Number of cut-points.</strong> Each additional cut-point
-adds two hazard parameters to estimate (one per arm). With limited
-interim data this can make individual interval posteriors diffuse. In
-our experience, one or two well-motivated cut-points (e.g. tied to a
-clinical milestone) is usually sufficient; finer partitions tend to add
-variance without commensurate bias reduction.</p></li>
+adds two hazard parameters to estimate in a two-arm design (one per
+treatment group). With limited interim data this can make individual
+interval posteriors diffuse. In our experience, one or two
+well-motivated cut-points (e.g., tied to a clinical milestone) is
+usually sufficient; finer partitions tend to add variance without
+commensurate bias reduction.</p></li>
 </ol>
 </div>
 <div id="sensitivity-to-the-cut-point-specification" class="section level2">
@@ -549,32 +667,33 @@ characteristics are similar across choices, the design is robust to the
 cut-point specification. If they differ markedly, the cut-point becomes
 a design decision worth justifying in the protocol.</p>
 <p>A simpler – but very different – comparison is the equivalent design
-that is <em>both</em> simulated and analysed under a single constant
-hazard per arm matched to the overall 24-month proportions:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>hc_flat <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.50</span>, <span class="at">endtime =</span> end_of_study)   <span class="co"># control, single hazard</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>ht_flat <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.40</span>, <span class="at">endtime =</span> end_of_study)   <span class="co"># treatment, single hazard</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>out_flat <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht_flat,</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">hazard_control   =</span> hc_flat,</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="dv">0</span>,</span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">100</span>,</span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="dv">0</span>,</span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">60</span>,</span>
-<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
-<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="at">prior            =</span> prior,</span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">4</span>,</span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
-<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
-<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
-<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">h0               =</span> <span class="dv">0</span>,</span>
-<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
-<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
-<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.975</span>,</span>
-<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
-<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
-<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes&quot;</span>)</span></code></pre></div>
+that is <em>both</em> simulated and analyzed under a single constant
+hazard for each treatment group matched to the overall 24-month
+proportions:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>hc_flat <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.50</span>, <span class="at">endtime =</span> end_of_study)   <span class="co"># control, single hazard</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>ht_flat <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="fl">0.40</span>, <span class="at">endtime =</span> end_of_study)   <span class="co"># treatment, single hazard</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>out_flat <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht_flat,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">hazard_control   =</span> hc_flat,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">cutpoints        =</span> <span class="cn">NULL</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">N_total          =</span> <span class="dv">100</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">lambda           =</span> <span class="dv">5</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">lambda_time      =</span> <span class="cn">NULL</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  <span class="at">interim_look     =</span> <span class="dv">60</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  <span class="at">prior_surv       =</span> prior_surv,</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">block            =</span> <span class="dv">4</span>,</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="at">rand_ratio       =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">prop_loss        =</span> <span class="fl">0.05</span>,</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">alternative      =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">h0               =</span> <span class="dv">0</span>,</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  <span class="at">Fn               =</span> <span class="fl">0.05</span>,</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>  <span class="at">Sn               =</span> <span class="fl">0.95</span>,</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>  <span class="at">prob_ha          =</span> <span class="fl">0.975</span>,</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>  <span class="at">N_impute         =</span> <span class="dv">50</span>,</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> <span class="dv">2000</span>,</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>  <span class="at">method           =</span> <span class="st">&quot;bayes-surv&quot;</span>)</span></code></pre></div>
 <p>Note that this changes both the simulated data-generating process
 <em>and</em> the analysis model, so any difference in operating
 characteristics conflates the two effects. It is most useful when the
@@ -585,7 +704,7 @@ cut-point?”.</p>
 <div id="see-also" class="section level2">
 <h2>See also</h2>
 <ul>
-<li>The “Example: Two-armed RCT” vignette covers the same design
+<li>The “Two-arm randomized trials” vignette covers the same design
 machinery using a single exponential hazard and a log-rank decision
 rule.</li>
 <li><code>?survival_adapt</code> documents all arguments, including the

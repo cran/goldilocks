@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Technical details of the Goldilocks design</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Technical details of the Goldilocks
+design</h1>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#vignette-summary" id="toc-vignette-summary">Vignette
+summary</a></li>
+<li><a href="#design-and-notation" id="toc-design-and-notation">1.
+Design and notation</a></li>
+<li><a href="#continuous-time-enrollment-process" id="toc-continuous-time-enrollment-process">2. Continuous-time
+enrollment process</a></li>
+<li><a href="#event-time-model" id="toc-event-time-model">3. Event-time
+model</a></li>
+<li><a href="#posterior-distribution-of-hazards" id="toc-posterior-distribution-of-hazards">4. Posterior distribution of
+hazards</a></li>
+<li><a href="#predictive-distribution-for-incomplete-outcomes" id="toc-predictive-distribution-for-incomplete-outcomes">5. Predictive
+distribution for incomplete outcomes</a></li>
+<li><a href="#interim-decision-algorithm" id="toc-interim-decision-algorithm">6. Interim decision algorithm</a>
+<ul>
+<li><a href="#predictive-probability-at-the-current-sample-size" id="toc-predictive-probability-at-the-current-sample-size">6.1
+Predictive probability at the current sample size</a></li>
+<li><a href="#predictive-probability-at-the-maximum-sample-size" id="toc-predictive-probability-at-the-maximum-sample-size">6.2
+Predictive probability at the maximum sample size</a></li>
+</ul></li>
+<li><a href="#final-analysis" id="toc-final-analysis">7. Final
+analysis</a>
+<ul>
+<li><a href="#frequentist-final-tests" id="toc-frequentist-final-tests">7.1 Frequentist final tests</a></li>
+<li><a href="#bayesian-survival-final-test" id="toc-bayesian-survival-final-test">7.2 Bayesian survival final
+test</a></li>
+<li><a href="#bayesian-binary-final-test" id="toc-bayesian-binary-final-test">7.3 Bayesian binary final
+test</a></li>
+<li><a href="#loss-to-follow-up-at-the-final-analysis" id="toc-loss-to-follow-up-at-the-final-analysis">7.4 Loss to follow-up
+at the final analysis</a></li>
+</ul></li>
+<li><a href="#operating-characteristics" id="toc-operating-characteristics">8. Operating characteristics</a>
+<ul>
+<li><a href="#visual-diagnostics" id="toc-visual-diagnostics">8.1 Visual
+diagnostics</a></li>
+</ul></li>
+<li><a href="#threshold-selection" id="toc-threshold-selection">9.
+Threshold selection</a></li>
+<li><a href="#relation-to-group-sequential-designs" id="toc-relation-to-group-sequential-designs">10. Relation to
+group-sequential designs</a></li>
+<li><a href="#package-specific-scope" id="toc-package-specific-scope">11. Package-specific scope</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div id="vignette-summary" class="section level2">
+<h2>Vignette summary</h2>
+<p>The <code>goldilocks</code> package implements the Goldilocks
+adaptive sample-size design of Broglio, Connor, and Berry (2014) for
+time-to-event and fixed-time binary endpoints. This vignette outlines
+the technical details of the design, including notation, the
+continuous-time enrollment process, the piecewise-exponential event-time
+model, Gamma posterior updating, posterior <strong>predictive
+probabilities</strong>, interim decision rules, final analysis options,
+and simulation-based calibration. The package vignettes “Two-arm
+randomized trials”, “Bayesian piecewise-exponential designs”, “Bayesian
+binary outcome designs”, and “Single-arm designs with a performance
+goal” provide more application-focused examples in R.</p>
+</div>
+<div id="design-and-notation" class="section level2">
+<h2>1. Design and notation</h2>
+<p>Consider a trial with maximum sample size <span class="math inline">\(N_{\max}\)</span>, planned endpoint time <span class="math inline">\(\tau\)</span>, and interim sample-size selection
+analyses after</p>
+<p><span class="math display">\[n_1 &lt; n_2 &lt; \cdots &lt; n_L &lt;
+N_{\max}\]</span></p>
+<p>subjects have been enrolled. The package argument
+<code>N_total</code> corresponds to <span class="math inline">\(N_{\max}\)</span>, <code>end_of_study</code> to
+<span class="math inline">\(\tau\)</span>, and <code>interim_look</code>
+to <span class="math inline">\((n_1,\ldots,n_L)\)</span>.</p>
+<p>Let <span class="math inline">\(Z_i \in \{0,1\}\)</span> denote
+treatment assignment for subject <span class="math inline">\(i\)</span>,
+matching the package data column <code>treatment</code>: <span class="math inline">\(Z_i = 1\)</span> for the treatment arm and <span class="math inline">\(Z_i = 0\)</span> for the control arm. In a
+single-arm design, all <span class="math inline">\(Z_i = 1\)</span> and
+there is no concurrent control. The package assumes that randomization
+occurs at enrollment; in practice those times can differ, but the
+distinction is not represented in the simulation model. We therefore use
+enrollment time throughout. Let <span class="math inline">\(E_i\)</span>
+denote enrollment time from first patient in, <span class="math inline">\(T_i^*\)</span> the true event time from
+enrollment, <span class="math inline">\(C_i\)</span> the administrative
+or loss-to-follow-up censoring time, and</p>
+<p><span class="math display">\[T_i = \min(T_i^*, C_i), \qquad
+  \delta_i = I(T_i^* \le C_i).\]</span></p>
+<p>At the interim analysis held when <span class="math inline">\(n_\ell\)</span> subjects have been enrolled, the
+analysis calendar time is <span class="math inline">\(E_{n_\ell}\)</span>. Subject <span class="math inline">\(i\)</span>’s current observed follow-up is</p>
+<p><span class="math display">\[u_{i\ell} = \max\{0, E_{n_\ell} -
+E_i\}.\]</span></p>
+<p>For enrolled subjects, the interim data are masked to the information
+available at this calendar time. If an event has not yet occurred by
+<span class="math inline">\(u_{i\ell}\)</span>, the subject is treated
+as censored at <span class="math inline">\(u_{i\ell}\)</span>. Subjects
+with <span class="math inline">\(i &gt; n_\ell\)</span> are not yet
+enrolled and contribute only to the maximum-sample-size prediction.</p>
+<p>At each interim analysis the design estimates two predictive
+probabilities:</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(P_{n_\ell}\)</span>, the probability of
+final success if accrual stops at the current enrolled sample size and
+all enrolled subjects complete follow-up;</li>
+<li><span class="math inline">\(P_{\max,\ell}\)</span>, the probability
+of final success if the trial continues to <span class="math inline">\(N_{\max}\)</span>.</li>
+</ol>
+<p>These are compared with thresholds <span class="math inline">\(S_\ell\)</span> and <span class="math inline">\(F_\ell\)</span>, corresponding to the package
+arguments <code>Sn</code> and <code>Fn</code>.</p>
+</div>
+<div id="continuous-time-enrollment-process" class="section level2">
+<h2>2. Continuous-time enrollment process</h2>
+<p>The simulation model places the first enrolled subject at time zero.
+This is a first-patient-in origin, not an earlier protocol-approval,
+site-activation, or recruitment-opening date. Let <span class="math inline">\(E_1 = 0\)</span> and let <span class="math inline">\(E_i\)</span> for <span class="math inline">\(i
+&gt; 1\)</span> denote the calendar time of the <span class="math inline">\(i\)</span>th enrollment measured from first
+patient in.</p>
+<p>Enrollment after the first patient follows a non-homogeneous Poisson
+process with a piecewise-constant intensity. Write the <span class="math inline">\(K\)</span> internal enrollment-rate knots as</p>
+<p><span class="math display">\[0 &lt; a_1 &lt; a_2 &lt; \cdots &lt;
+a_K,\]</span></p>
+<p>and define <span class="math inline">\(a_0 = 0\)</span> and <span class="math inline">\(a_{K+1} = \infty\)</span>. These internal knots
+are supplied as <code>lambda_time</code>; zero is implicit and is not
+included. There are <span class="math inline">\(K+1\)</span> positive
+rates</p>
+<p><span class="math display">\[\boldsymbol{\rho} =
+(\rho_1,\ldots,\rho_{K+1}),\]</span></p>
+<p>supplied as <code>lambda</code>, with</p>
+<p><span class="math display">\[\rho(t) = \rho_j, \qquad a_{j-1} \le t
+&lt; a_j.\]</span></p>
+<p>Consequently, <code>length(lambda)</code> must be exactly
+<code>length(lambda_time) + 1</code>. A constant enrollment rate is
+represented by <code>lambda_time = NULL</code> and a scalar
+<code>lambda</code>. The final rate continues beyond the last knot until
+the requested <code>N_total</code> is reached; <code>enrollment()</code>
+does not impose a finite recruitment horizon.</p>
+<p>The cumulative enrollment intensity is</p>
+<p><span class="math display">\[A(t) = \int_0^t \rho(u)\,du
+       = \sum_{j=1}^{K+1}
+         \rho_j\{\min(t,a_j)-a_{j-1}\}_+.\]</span></p>
+<p>To generate the process exactly, draw independent variables <span class="math inline">\(X_2,\ldots,X_{N_{\max}} \sim
+\operatorname{Exponential}(1)\)</span> and form</p>
+<p><span class="math display">\[Q_i = \sum_{k=2}^{i} X_k.\]</span></p>
+<p>The enrollment times are then obtained through the inverse cumulative
+intensity,</p>
+<p><span class="math display">\[E_1 = 0, \qquad E_i = A^{-1}(Q_i), \quad
+i=2,\ldots,N_{\max}.\]</span></p>
+<p>More explicitly, if <span class="math inline">\(A(a_{j-1}) \le Q_i
+&lt; A(a_j)\)</span>, then</p>
+<p><span class="math display">\[E_i = a_{j-1} +
+\frac{Q_i-A(a_{j-1})}{\rho_j}.\]</span></p>
+<p>This time-rescaling construction is exact: after the patient anchored
+at zero, the number of arrivals in any interval <span class="math inline">\((s,t]\)</span> is Poisson with mean <span class="math inline">\(A(t)-A(s)\)</span>, and counts over disjoint
+intervals are independent. Under a constant rate <span class="math inline">\(\rho\)</span>, the successive gaps are independent
+<span class="math inline">\(\operatorname{Exponential}(\rho)\)</span>
+variables and <span class="math inline">\(E_n \sim
+\operatorname{Gamma}(n-1,\text{rate}=\rho)\)</span>. In particular,
+<span class="math inline">\(\operatorname{E}(E_n)=(n-1)/\rho\)</span>.
+The fixed first patient accounts for the <span class="math inline">\(n-1\)</span>, rather than <span class="math inline">\(n\)</span>, random gaps.</p>
+<p>This differs from generating Poisson counts in unit-time bins and
+adding uniform jitter afterward. Binning is sensitive to the arbitrary
+width of a time unit and cannot represent a rate change inside a bin.
+Cumulative-intensity inversion handles integer and fractional knots
+identically and requires work proportional to the requested number of
+subjects rather than to the elapsed number of empty bins.</p>
+<p>For example,</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">enrollment</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>  <span class="at">lambda =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">8</span>),</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="at">lambda_time =</span> <span class="fu">c</span>(<span class="fl">3.5</span>, <span class="dv">9</span>),</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">100</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>)</span></code></pre></div>
+<p>uses rate 2 over <span class="math inline">\([0,3.5)\)</span>, rate 5
+over <span class="math inline">\([3.5,9)\)</span>, and rate 8
+thereafter. All rates are enrollments per common time unit.
+<code>lambda_time</code>, enrollment times, event times, hazard
+<code>cutpoints</code>, and <code>end_of_study</code> should therefore
+all use the same unit, such as days or months.</p>
+<p>Although <code>lambda_time</code> and hazard <code>cutpoints</code>
+share the same internal-knot API, they operate on different clocks.
+Enrollment knots are trial-calendar times from first patient in. Hazard
+cutpoints are follow-up times from each individual subject’s enrollment.
+Their values and lengths are unrelated unless the scientific design
+happens to make them coincide.</p>
+<p>The package does not currently model site activations, site-specific
+random rates, pauses, recruitment caps, or uncertainty in the supplied
+rates. Those operational features require a richer site-level accrual
+model; <code>lambda</code> represents the trial-level rate schedule
+assumed for a simulation scenario.</p>
+</div>
+<div id="event-time-model" class="section level2">
+<h2>3. Event-time model</h2>
+<p>The time-to-event model is piecewise exponential. Let</p>
+<p><span class="math display">\[0 = s_0 &lt; s_1 &lt; \cdots &lt;
+s_{J-1}.\]</span></p>
+<p>The interior cutpoints <span class="math inline">\((s_1,\ldots,s_{J-1})\)</span> are supplied through
+<code>cutpoints</code>; the initial boundary <span class="math inline">\(s_0 = 0\)</span> is implicit. These define
+intervals</p>
+<p><span class="math display">\[[s_0, s_1), [s_1, s_2), \ldots,
+[s_{J-1}, \infty).\]</span></p>
+<p>For treatment value <span class="math inline">\(z \in
+\{0,1\}\)</span>, where <span class="math inline">\(z = 1\)</span>
+denotes the treatment arm and <span class="math inline">\(z = 0\)</span>
+denotes the control arm, interval <span class="math inline">\(j\)</span>
+has constant hazard <span class="math inline">\(\lambda_{zj}\)</span>.
+The subject-level hazard is therefore</p>
+<p><span class="math display">\[h_z(t) = \lambda_{zj}, \qquad s_{j-1}
+\le t &lt; s_j,\]</span></p>
+<p>where the last interval has no finite upper endpoint. With
+<code>cutpoints = NULL</code>, <span class="math inline">\(J =
+1\)</span> and the model reduces to an ordinary exponential model.</p>
+<p>The cumulative hazard for treatment value <span class="math inline">\(z\)</span> at time <span class="math inline">\(t\)</span> is</p>
+<p><span class="math display">\[H_z(t) =
+  \sum_{j=1}^{J}
+  \lambda_{zj}
+  \{ \min(t, s_j) - s_{j-1} \}_+,\]</span></p>
+<p>where <span class="math inline">\(s_J = \infty\)</span> and <span class="math inline">\(\{x\}_+ = \max(x,0)\)</span>. The corresponding
+survival and cumulative event probability are</p>
+<p><span class="math display">\[S_z(t) = \exp\{-H_z(t)\}, \qquad
+  p_z(t) = 1 - S_z(t).\]</span></p>
+<p>The helper <code>prop_to_haz()</code> solves the inverse problem used
+in simulation planning: given event probabilities at one or more time
+points, it returns the piecewise hazards that imply those probabilities.
+The helper <code>ppwe()</code> evaluates <span class="math inline">\(p_z(\tau)\)</span>, and <code>haz_to_prop()</code>
+applies this transformation to posterior hazard draws.</p>
+<p>For observed follow-up <span class="math inline">\((T_i, \delta_i,
+Z_i)\)</span>, the piecewise-exponential likelihood can be written in
+terms of interval-specific event counts and exposure times. Define</p>
+<p><span class="math display">\[d_{zj} = \sum_i I(Z_i = z)\delta_i I(T_i
+\in [s_{j-1}, s_j)),\]</span></p>
+<p>and</p>
+<p><span class="math display">\[y_{zj} =
+  \sum_i I(Z_i = z)
+  \{ \min(T_i, s_j) - s_{j-1} \}_+ I(T_i &gt; s_{j-1}).\]</span></p>
+<p>Up to factors not involving <span class="math inline">\(\lambda_{zj}\)</span>, the likelihood contribution
+for treatment value <span class="math inline">\(z\)</span> is</p>
+<p><span class="math display">\[L_z(\boldsymbol{\lambda}_z; \mathcal{D})
+  \propto
+  \prod_{j=1}^{J}
+  \lambda_{zj}^{d_{zj}} \exp(-\lambda_{zj}y_{zj}),\]</span></p>
+<p>where <span class="math inline">\(\boldsymbol{\lambda}_z =
+(\lambda_{z1},\ldots,\lambda_{zJ})^\top\)</span>. This
+sufficient-statistic form is what makes the Gamma posterior update
+available in closed form.</p>
+</div>
+<div id="posterior-distribution-of-hazards" class="section level2">
+<h2>4. Posterior distribution of hazards</h2>
+<p>For each treatment value <span class="math inline">\(z\)</span> and
+interval <span class="math inline">\(j\)</span>, <code>goldilocks</code>
+assumes an independent Gamma prior</p>
+<p><span class="math display">\[\lambda_{zj} \sim
+\operatorname{Gamma}(\alpha_0, \beta_0),\]</span></p>
+<p>where <span class="math inline">\(\alpha_{0j}\)</span> is the shape
+and <span class="math inline">\(\beta_{0j}\)</span> is the rate for
+interval <span class="math inline">\(j\)</span>. This follows the
+<code>stats::rgamma()</code> parameterization. The argument
+<code>prior_surv = c(alpha0, beta0)</code> broadcasts one shape-rate
+pair over all intervals. Alternatively, a two-row matrix supplies
+interval-specific shapes in row 1 and rates in row 2, with columns in
+chronological interval order. The same interval prior is applied to
+every treatment group. <code>prior_surv_final</code> accepts the same
+forms and defaults to <code>prior_surv</code>; it can therefore specify
+a different prior for final imputation and final piecewise-exponential
+analysis.</p>
+<p>At an analysis, let <span class="math inline">\(d_{zj}\)</span> be
+the number of observed events for treatment value <span class="math inline">\(z\)</span>, interval <span class="math inline">\(j\)</span>, and let <span class="math inline">\(y_{zj}\)</span> be the total observed exposure
+time for that treatment value and interval. Gamma-exponential conjugacy
+gives</p>
+<p><span class="math display">\[\lambda_{zj} \mid \mathcal{D}
+  \sim \operatorname{Gamma}(\alpha_{0j} + d_{zj}, \beta_{0j} +
+y_{zj}).\]</span></p>
+<p>The package obtains <span class="math inline">\((d_{zj},
+y_{zj})\)</span> by splitting each subject’s observed follow-up over the
+cut-point intervals. Posterior draws are generated independently for
+each treatment group and interval. In early interim analyses, later
+piecewise intervals may have no exposure. The
+<code>empty_interval</code> argument controls the policy for these
+intervals:</p>
+<ul>
+<li><code>empty_interval = &quot;propagate&quot;</code> is the default and
+preserves historical package behavior. It propagates exposure and event
+counts from the nearest non-empty interval within the same treatment
+group and emits a warning. This prevents undefined posterior draws, but
+it should be interpreted as a computational fallback rather than
+evidence about that later interval.</li>
+<li><code>empty_interval = &quot;prior&quot;</code> leaves the interval with <span class="math inline">\(d_{zj} = 0\)</span> and <span class="math inline">\(y_{zj} = 0\)</span>, so the posterior for that
+interval is exactly the specified Gamma prior.</li>
+<li><code>empty_interval = &quot;error&quot;</code> stops the analysis when any
+treatment-arm interval has no exposed subjects.</li>
+</ul>
+<p>The posterior density factorizes as</p>
+<p><span class="math display">\[\pi(\boldsymbol{\lambda} \mid
+\mathcal{D})
+  =
+  \prod_z \prod_{j=1}^{J}
+  \pi(\lambda_{zj} \mid d_{zj}, y_{zj}),\]</span></p>
+<p>where each marginal factor is the Gamma distribution above. Posterior
+predictive calculations integrate over this density rather than
+conditioning on a single plug-in hazard estimate.</p>
+</div>
+<div id="predictive-distribution-for-incomplete-outcomes" class="section level2">
+<h2>5. Predictive distribution for incomplete outcomes</h2>
+<p>At an interim analysis, subjects can be separated into three
+sets:</p>
+<ol style="list-style-type: decimal">
+<li>enrolled subjects with complete endpoint information;</li>
+<li>enrolled subjects with partial follow-up; and</li>
+<li>future subjects not yet enrolled.</li>
+</ol>
+<p>The first set contributes observed events and exposure to the
+posterior. The second and third sets require prediction.</p>
+<p>For an enrolled subject who is event-free through time <span class="math inline">\(u\)</span>, a future event time is drawn from the
+conditional piecewise-exponential distribution</p>
+<p><span class="math display">\[\Pr(T \le t \mid T &gt; u)
+  = \frac{F(t) - F(u)}{1 - F(u)}, \qquad t &gt; u,\]</span></p>
+<p>where <span class="math inline">\(F(t) = 1 - S(t)\)</span>.
+Equivalently, if <span class="math inline">\(U \sim
+\operatorname{Uniform}(0,1)\)</span>, then</p>
+<p><span class="math display">\[T = F^{-1}\{F(u) + U[1 -
+F(u)]\}.\]</span></p>
+<p>This is implemented by <code>pwe_impute()</code>. For future subjects
+in the maximum-sample-size calculation, <code>pwe_sim()</code> draws
+unconditional event times from the same piecewise-exponential model. In
+the package implementation, these future event-time imputations do not
+require explicitly simulating future enrollment times at the interim
+look; the number of future subjects is determined by <span class="math inline">\(N_{\max} - n_\ell\)</span>.</p>
+<p>Let <span class="math inline">\(\mathcal{D}_{\ell}^{\mathrm{obs}}\)</span> denote
+the data observed at look <span class="math inline">\(\ell\)</span>, and
+let <span class="math inline">\(\mathcal{D}^{\mathrm{mis}}\)</span>
+denote unobserved event times and future censoring indicators. The
+posterior predictive density is</p>
+<p><span class="math display">\[p(\mathcal{D}^{\mathrm{mis}} \mid
+\mathcal{D}_{\ell}^{\mathrm{obs}})
+  =
+  \int
+  p(\mathcal{D}^{\mathrm{mis}} \mid \boldsymbol{\lambda})
+  \pi(\boldsymbol{\lambda} \mid \mathcal{D}_{\ell}^{\mathrm{obs}})
+  d\boldsymbol{\lambda}.\]</span></p>
+<p>This density is the mathematical target, not an object that the
+package evaluates in closed form. In the implementation,
+<code>posterior()</code> draws <span class="math inline">\(\boldsymbol{\lambda}\)</span>,
+<code>impute_data()</code> draws completed outcomes conditional on those
+hazards, and <code>test_stop_success()</code> repeats the
+impute-and-analyze cycle to approximate the predictive probability by
+Monte Carlo simulation.</p>
+</div>
+<div id="interim-decision-algorithm" class="section level2">
+<h2>6. Interim decision algorithm</h2>
+<p>At interim look <span class="math inline">\(\ell\)</span>, the
+package first estimates the posterior of the hazard parameters from the
+currently observable data. It then uses Monte Carlo integration to
+approximate <span class="math inline">\(P_{n_\ell}\)</span> and <span class="math inline">\(P_{\max,\ell}\)</span>.</p>
+<p>Let <span class="math inline">\(\psi(\mathcal{D})\)</span> be the
+final success indicator for a completed analysis dataset:</p>
+<p><span class="math display">\[\psi(\mathcal{D}) =
+  I\{Q(\mathcal{D}) &gt; c\},\]</span></p>
+<p>where <span class="math inline">\(Q(\mathcal{D})\)</span> is the
+final analysis quantity and <span class="math inline">\(c\)</span> is
+the success threshold. In package notation, <span class="math inline">\(c\)</span> is set by <code>prob_ha</code>. The
+final analysis quantity <span class="math inline">\(Q(\mathcal{D})\)</span> depends on the analysis
+method:</p>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Design setting</th>
+<th><code>method</code></th>
+<th><span class="math inline">\(Q(\mathcal{D})\)</span></th>
+<th>Supported alternatives</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Two-arm randomized trial</td>
+<td><code>logrank</code></td>
+<td><span class="math inline">\(1-p(\mathcal{D})\)</span>, where <span class="math inline">\(p(\mathcal{D})\)</span> is the traditional
+log-rank test P-value, with one-sided variants defined in Section
+7.1</td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code>,
+<code>&quot;two.sided&quot;</code></td>
+</tr>
+<tr class="even">
+<td>Two-arm randomized trial</td>
+<td><code>cox</code></td>
+<td><span class="math inline">\(1-p(\mathcal{D})\)</span>, where <span class="math inline">\(p(\mathcal{D})\)</span> is the traditional
+Wald-test P-value, with one-sided variants defined in Section 7.1</td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code>,
+<code>&quot;two.sided&quot;</code></td>
+</tr>
+<tr class="odd">
+<td>Two-arm randomized trial</td>
+<td><code>riskdiff</code></td>
+<td><span class="math inline">\(1-p(\mathcal{D})\)</span>, where <span class="math inline">\(p(\mathcal{D})\)</span> is the Wald-test P-value
+for the treatment-control event-risk difference</td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code>,
+<code>&quot;two.sided&quot;</code></td>
+</tr>
+<tr class="even">
+<td>Two-arm randomized trial</td>
+<td><code>bayes-surv</code></td>
+<td><span class="math inline">\(\Pr(\Delta &lt; h_0 \mid
+\mathcal{D})\)</span> or <span class="math inline">\(\Pr(\Delta &gt; h_0
+\mid \mathcal{D})\)</span></td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code></td>
+</tr>
+<tr class="odd">
+<td>Single-arm trial</td>
+<td><code>bayes-surv</code></td>
+<td><span class="math inline">\(\Pr(p_1(\tau) &lt; h_0 \mid
+\mathcal{D})\)</span> or <span class="math inline">\(\Pr(p_1(\tau) &gt;
+h_0 \mid \mathcal{D})\)</span></td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code></td>
+</tr>
+<tr class="even">
+<td>Two-arm randomized trial</td>
+<td><code>bayes-bin</code></td>
+<td><span class="math inline">\(\Pr(\Delta_{\mathrm{bin}} &lt; h_0 \mid
+\mathcal{D})\)</span> or <span class="math inline">\(\Pr(\Delta_{\mathrm{bin}} &gt; h_0 \mid
+\mathcal{D})\)</span></td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code></td>
+</tr>
+<tr class="odd">
+<td>Single-arm trial</td>
+<td><code>bayes-bin</code></td>
+<td><span class="math inline">\(\Pr(\pi_1 &lt; h_0 \mid
+\mathcal{D})\)</span> or <span class="math inline">\(\Pr(\pi_1 &gt; h_0
+\mid \mathcal{D})\)</span></td>
+<td><code>&quot;less&quot;</code>, <code>&quot;greater&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<p>For frequentist analyses, <code>prob_ha</code> is therefore a
+transformed P-value threshold. For example, <code>prob_ha = 0.975</code>
+corresponds to a one-sided <span class="math inline">\(\alpha =
+0.025\)</span> rule. The value should be chosen during design
+calibration to control the desired type I error rate across relevant
+null scenarios.</p>
+<div id="predictive-probability-at-the-current-sample-size" class="section level3">
+<h3>6.1 Predictive probability at the current sample size</h3>
+<p>The current-sample-size predictive probability <span class="math inline">\(P_{n_\ell}\)</span> is estimated by:</p>
+<ol style="list-style-type: decimal">
+<li>draw one set of hazard parameters from the interim posterior;</li>
+<li>impute remaining endpoint outcomes for enrolled subjects only;</li>
+<li>apply the prespecified final analysis rule to the completed data;
+and</li>
+<li>record whether that completed trial is successful.</li>
+</ol>
+<p>Formally,</p>
+<p><span class="math display">\[P_{n_\ell}
+  =
+  \operatorname{E}\{
+    \psi(\mathcal{D}_{n_\ell}^{\mathrm{comp}})
+    \mid \mathcal{D}_{\ell}^{\mathrm{obs}}
+  \},\]</span></p>
+<p>where <span class="math inline">\(\mathcal{D}_{n_\ell}^{\mathrm{comp}}\)</span> is
+the completed dataset formed from the <span class="math inline">\(n_\ell\)</span> enrolled subjects after imputing
+their remaining follow-up. Equivalently,</p>
+<p><span class="math display">\[P_{n_\ell}
+  =
+  \int
+  \psi(\mathcal{D}_{n_\ell}^{\mathrm{obs}},
+       \mathcal{D}_{n_\ell}^{\mathrm{mis}})
+  p(\mathcal{D}_{n_\ell}^{\mathrm{mis}}
+    \mid \mathcal{D}_{\ell}^{\mathrm{obs}})
+  d\mathcal{D}_{n_\ell}^{\mathrm{mis}}.\]</span></p>
+<p>Repeating the four-step procedure above for Monte Carlo replicate
+<span class="math inline">\(m = 1,\ldots,M\)</span>, where <span class="math inline">\(M\)</span> is set by <code>N_impute</code>,
+gives</p>
+<p><span class="math display">\[\widehat{P}_{n_\ell}
+  = \frac{1}{M}\sum_{m=1}^{M} I\{\textrm{success in replicate }
+m\}.\]</span></p>
+<p>If</p>
+<p><span class="math display">\[\widehat{P}_{n_\ell} &gt;
+S_\ell,\]</span></p>
+<p>accrual is stopped for expected success. Enrolled subjects are still
+followed to the planned final analysis time.</p>
+</div>
+<div id="predictive-probability-at-the-maximum-sample-size" class="section level3">
+<h3>6.2 Predictive probability at the maximum sample size</h3>
+<p>The maximum-sample-size predictive probability <span class="math inline">\(P_{\max,\ell}\)</span> is estimated similarly,
+except that the completed trial includes both currently enrolled
+subjects and future subjects required to reach <span class="math inline">\(N_{\max}\)</span>. For each replicate, event times
+are imputed for the future subjects, the completed dataset is analyzed,
+and success is recorded:</p>
+<p><span class="math display">\[P_{\max,\ell}
+  =
+  \operatorname{E}\{
+    \psi(\mathcal{D}_{N_{\max}}^{\mathrm{comp}})
+    \mid \mathcal{D}_{\ell}^{\mathrm{obs}}
+  \}.\]</span></p>
+<p><span class="math display">\[\widehat{P}_{\max,\ell}
+  = \frac{1}{M}\sum_{m=1}^{M}
+    I\{\textrm{success at } N_{\max} \textrm{ in replicate }
+m\}.\]</span></p>
+<p>If</p>
+<p><span class="math display">\[\widehat{P}_{\max,\ell} &lt;
+F_\ell,\]</span></p>
+<p>the trial stops for futility. Otherwise, accrual continues to the
+next interim look.</p>
+<p>Thus the interim action at look <span class="math inline">\(\ell\)</span> can be represented as</p>
+<p><span class="math display">\[A_\ell =
+\begin{cases}
+\textrm{stop accrual for expected success}, &amp;
+  \widehat{P}_{n_\ell} &gt; S_\ell,\\
+\textrm{stop for futility}, &amp;
+  \widehat{P}_{\max,\ell} &lt; F_\ell,\\
+\textrm{continue accrual}, &amp;
+  \textrm{otherwise}.
+\end{cases}\]</span></p>
+<p>The first look satisfying either stopping condition defines the
+adaptive stopping look,</p>
+<p><span class="math display">\[L^* = \inf\{\ell : \widehat{P}_{n_\ell}
+&gt; S_\ell
+  \textrm{ or } \widehat{P}_{\max,\ell} &lt; F_\ell\},\]</span></p>
+<p>with <span class="math inline">\(L^* = L + 1\)</span> if no interim
+stopping condition is met and the design continues to <span class="math inline">\(N_{\max}\)</span>.</p>
+</div>
+</div>
+<div id="final-analysis" class="section level2">
+<h2>7. Final analysis</h2>
+<p>The final analysis is conducted after accrual has stopped and the
+relevant follow-up has completed for the enrolled cohort, subject to the
+handling of loss to follow-up described below. The final rule supplies
+the binary success indicator used inside the predictive probability
+calculations.</p>
+<div id="frequentist-final-tests" class="section level3">
+<h3>7.1 Frequentist final tests</h3>
+<p>For <code>method = &quot;logrank&quot;</code>, success is based on a log-rank
+test. For <code>method = &quot;cox&quot;</code>, success is based on the Wald test
+from a Cox proportional hazards regression. For
+<code>method = &quot;riskdiff&quot;</code>, success is based on a Wald test for
+the treatment-control difference in binary event risks at
+<code>end_of_study</code>. For these methods, <code>goldilocks</code>
+stores <span class="math inline">\(1-p\)</span> in
+<code>post_prob_ha</code>; this is not a posterior probability, but it
+puts frequentist and Bayesian rules on a common “larger is stronger
+evidence” scale. For example, a one-sided test at <span class="math inline">\(\alpha = 0.025\)</span> corresponds to
+<code>prob_ha = 0.975</code>.</p>
+<p>For the log-rank option, let <span class="math inline">\(Z_{\mathrm{LR}}\)</span> denote the signed
+log-rank statistic, with positive values corresponding to excess events
+in the control arm under the package convention. Let <span class="math inline">\(p_{\mathrm{LR}}\)</span> denote the traditional
+two-sided log-rank test P-value. For the Cox option, let <span class="math inline">\(\widehat{\eta}\)</span> be the estimated log
+hazard ratio for treatment versus control. The null value
+<code>h0</code> is on the log-hazard-ratio scale, so the package
+uses</p>
+<p><span class="math display">\[Z_{\mathrm{Cox}} = \frac{\widehat{\eta}
+- h_0}
+  {\operatorname{se}(\widehat{\eta})}.\]</span></p>
+<p>When <code>h0 = 0</code>, this is the usual hazard-ratio-equals-1
+null. A non-inferiority margin specified as a hazard ratio can be
+supplied as <code>h0 = log(margin)</code>. Here, lower treatment hazard
+corresponds to <span class="math inline">\(Z_{\mathrm{Cox}} &lt;
+0\)</span>. Let <span class="math inline">\(p_{\mathrm{Cox}}\)</span>
+denote the two-sided Wald-test P-value relative to <code>h0</code>. The
+package uses the following method-specific definitions of <span class="math inline">\(Q(\mathcal{D})\)</span>:</p>
+<p>For the risk-difference option, let <span class="math inline">\(\widehat p_1\)</span> and <span class="math inline">\(\widehat p_0\)</span> be the observed event
+proportions in the treatment and control arms, with sample sizes <span class="math inline">\(n_1\)</span> and <span class="math inline">\(n_0\)</span>. The estimated effect and its
+unpooled binomial variance are</p>
+<p><span class="math display">\[\widehat\Delta = \widehat p_1 - \widehat
+p_0,\]</span></p>
+<p><span class="math display">\[U_{\Delta} =
+  \frac{\widehat p_1(1-\widehat p_1)}{n_1} +
+  \frac{\widehat p_0(1-\widehat p_0)}{n_0}.\]</span></p>
+<p>The complete-data Wald statistic is</p>
+<p><span class="math display">\[Z_{\mathrm{RD}} =
+  \frac{\widehat\Delta-h_0}{\sqrt{U_{\Delta}}}.\]</span></p>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Alternative</th>
+<th><span class="math inline">\(Q(\mathcal{D})\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>logrank</code></td>
+<td><code>&quot;less&quot;</code></td>
+<td><span class="math inline">\(\Phi(Z_{\mathrm{LR}})\)</span></td>
+</tr>
+<tr class="even">
+<td><code>logrank</code></td>
+<td><code>&quot;greater&quot;</code></td>
+<td><span class="math inline">\(1 - \Phi(Z_{\mathrm{LR}})\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>logrank</code></td>
+<td><code>&quot;two.sided&quot;</code></td>
+<td><span class="math inline">\(1 - p_{\mathrm{LR}}\)</span></td>
+</tr>
+<tr class="even">
+<td><code>cox</code></td>
+<td><code>&quot;less&quot;</code></td>
+<td><span class="math inline">\(1 - \Phi(Z_{\mathrm{Cox}})\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>cox</code></td>
+<td><code>&quot;greater&quot;</code></td>
+<td><span class="math inline">\(\Phi(Z_{\mathrm{Cox}})\)</span></td>
+</tr>
+<tr class="even">
+<td><code>cox</code></td>
+<td><code>&quot;two.sided&quot;</code></td>
+<td><span class="math inline">\(1 - p_{\mathrm{Cox}}\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>riskdiff</code></td>
+<td><code>&quot;less&quot;</code></td>
+<td><span class="math inline">\(1 - \Phi(Z_{\mathrm{RD}})\)</span></td>
+</tr>
+<tr class="even">
+<td><code>riskdiff</code></td>
+<td><code>&quot;greater&quot;</code></td>
+<td><span class="math inline">\(\Phi(Z_{\mathrm{RD}})\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>riskdiff</code></td>
+<td><code>&quot;two.sided&quot;</code></td>
+<td><span class="math inline">\(1 -
+2\Phi(-|Z_{\mathrm{RD}}|)\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The one-sided directions differ between the log-rank rows and the
+model-based rows because of the sign convention of the package’s
+log-rank statistic.</p>
+<p>The risk-difference analysis discards event-time information and
+requires complete binary endpoint status. The returned
+<code>est_final</code> is <span class="math inline">\(\widehat\Delta\)</span>.</p>
+<p>When a Cox or risk-difference final analysis uses multiple
+imputation, the analysis is applied separately to each completed
+dataset. Let <span class="math inline">\(\widehat{\theta}_m\)</span> and
+<span class="math inline">\(U_m\)</span> be the scalar effect estimate
+and its estimated variance from imputation <span class="math inline">\(m
+= 1,\ldots,M\)</span>. For Cox regression <span class="math inline">\(\widehat{\theta}_m\)</span> is the log hazard
+ratio; for risk difference it is <span class="math inline">\(\widehat\Delta_m\)</span>. Rubin’s scalar pooling
+rules give</p>
+<p><span class="math display">\[\bar{\theta} =
+\frac{1}{M}\sum_{m=1}^{M}\widehat{\theta}_m, \qquad
+\bar{U} = \frac{1}{M}\sum_{m=1}^{M}U_m,\]</span></p>
+<p><span class="math display">\[B = \frac{1}{M-1}\sum_{m=1}^{M}
+  (\widehat{\theta}_m - \bar{\theta})^2, \qquad
+T = \bar{U} + \left(1 + \frac{1}{M}\right)B.\]</span></p>
+<p>The pooled Wald statistic is <span class="math inline">\((\bar{\theta} - h_0) / \sqrt{T}\)</span>. Its
+P-value uses a <span class="math inline">\(t\)</span> reference
+distribution with Rubin’s large-sample degrees of freedom</p>
+<p><span class="math display">\[\nu = (M-1)\left(1 +
+\frac{1}{r}\right)^2, \qquad
+r = \frac{(1 + 1/M)B}{\bar{U}}.\]</span></p>
+<p>When <span class="math inline">\(B = 0\)</span>, <span class="math inline">\(\nu = \infty\)</span> and the reference
+distribution reduces to the standard normal distribution. At least two
+imputations are therefore required. The returned <code>est_final</code>
+is <span class="math inline">\(\bar{\theta}\)</span>, while
+<code>post_prob_ha</code> is <span class="math inline">\(1-p\)</span>
+from this pooled test with the direction determined by
+<code>alternative</code>.</p>
+</div>
+<div id="bayesian-survival-final-test" class="section level3">
+<h3>7.2 Bayesian survival final test</h3>
+<p>For <code>method = &quot;bayes-surv&quot;</code>, posterior hazard draws are
+mapped to cumulative event probabilities at <span class="math inline">\(\tau\)</span>. In a two-arm design the treatment
+effect is</p>
+<p><span class="math display">\[\Delta = p_1(\tau) -
+p_0(\tau),\]</span></p>
+<p>where <span class="math inline">\(p_1(\tau)\)</span> is the
+treatment-arm event probability and <span class="math inline">\(p_0(\tau)\)</span> is the control-arm event
+probability. The effect is on the event scale, not the survival scale.
+For an adverse event, benefit usually means <span class="math inline">\(\Delta &lt; 0\)</span>.</p>
+<p>Because <span class="math inline">\(p_a(\tau) = 1 -
+\exp\{-H_a(\tau)\}\)</span>, posterior draws of <span class="math inline">\(\Delta\)</span> are obtained by transforming
+posterior draws of <span class="math inline">\(\boldsymbol{\lambda}_1\)</span> and <span class="math inline">\(\boldsymbol{\lambda}_0\)</span>:</p>
+<p><span class="math display">\[\Delta^{(b)}
+  =
+  \left[1 - \exp\{-H_1^{(b)}(\tau)\}\right]
+  -
+  \left[1 - \exp\{-H_0^{(b)}(\tau)\}\right],
+  \qquad b = 1,\ldots,B.\]</span></p>
+<p>The Monte Carlo estimate of the posterior probability for
+<code>alternative = &quot;less&quot;</code> is</p>
+<p><span class="math display">\[\widehat{\Pr}(\Delta &lt; h_0 \mid
+\mathcal{D})
+  =
+  \frac{1}{B}\sum_{b=1}^{B} I(\Delta^{(b)} &lt; h_0),\]</span></p>
+<p>where <span class="math inline">\(B\)</span> is set by
+<code>N_mcmc</code>.</p>
+<p>With <code>alternative = &quot;less&quot;</code>, success is declared when</p>
+<p><span class="math display">\[\Pr(\Delta &lt; h_0 \mid \mathcal{D})
+&gt; \texttt{prob_ha}.\]</span></p>
+<p>With <code>alternative = &quot;greater&quot;</code>, success is declared
+when</p>
+<p><span class="math display">\[\Pr(\Delta &gt; h_0 \mid \mathcal{D})
+&gt; \texttt{prob_ha}.\]</span></p>
+<p>The Bayesian final test is one-sided in the package;
+<code>alternative = &quot;two.sided&quot;</code> is not supported.</p>
+<p>In a single-arm design there is no <span class="math inline">\(p_0(\tau)\)</span>. The estimand becomes <span class="math inline">\(p_1(\tau)\)</span>, and <span class="math inline">\(h_0\)</span> is an external benchmark event
+probability. In clinical-trial terminology this benchmark is often
+called a performance goal (PG) or objective performance criterion (OPC).
+Consequently, single-arm survival designs in <code>goldilocks</code>
+require <code>method = &quot;bayes-surv&quot;</code>; complete binary single-arm
+designs can use <code>method = &quot;bayes-bin&quot;</code>.</p>
+</div>
+<div id="bayesian-binary-final-test" class="section level3">
+<h3>7.3 Bayesian binary final test</h3>
+<p>For <code>method = &quot;bayes-bin&quot;</code>, each analysis dataset is
+reduced to the binary indicator of whether the endpoint has occurred by
+<span class="math inline">\(\tau\)</span>. Subjects with right-censored
+follow-up before <span class="math inline">\(\tau\)</span> must be
+imputed or excluded before this final test is applied, as described
+below.</p>
+<p>Let <span class="math inline">\(x_z\)</span> be the number of events
+and <span class="math inline">\(n_z\)</span> the number of subjects in
+treatment group <span class="math inline">\(z\)</span>. With
+<code>prior_bin = c(a, b)</code>, the event probability in arm <span class="math inline">\(z\)</span> has posterior distribution</p>
+<p><span class="math display">\[\pi_z \mid \mathcal{D} \sim
+  \operatorname{Beta}(a + x_z, b + n_z - x_z).\]</span></p>
+<p>In a two-arm design, the binary treatment effect is</p>
+<p><span class="math display">\[\Delta_{\mathrm{bin}} = \pi_1 -
+\pi_0,\]</span></p>
+<p>the treatment-arm event probability minus the control-arm event
+probability. For an adverse binary event, benefit usually means <span class="math inline">\(\Delta_{\mathrm{bin}} &lt; 0\)</span>. With
+<code>alternative = &quot;less&quot;</code>, success is declared when</p>
+<p><span class="math display">\[\Pr(\Delta_{\mathrm{bin}} &lt; h_0 \mid
+\mathcal{D}) &gt;
+  \texttt{prob_ha}.\]</span></p>
+<p>With <code>alternative = &quot;greater&quot;</code>, success is declared
+when</p>
+<p><span class="math display">\[\Pr(\Delta_{\mathrm{bin}} &gt; h_0 \mid
+\mathcal{D}) &gt;
+  \texttt{prob_ha}.\]</span></p>
+<p>In a single-arm design, the estimand is <span class="math inline">\(\pi_1\)</span> and <code>h0</code> is the external
+benchmark event probability. Thus, <code>alternative = &quot;less&quot;</code>
+declares success when</p>
+<p><span class="math display">\[\Pr(\pi_1 &lt; h_0 \mid \mathcal{D})
+&gt; \texttt{prob\_ha}.\]</span></p>
+<p>The posterior probability can be computed in three ways. With
+<code>bin_method = &quot;mc&quot;</code>, the package draws from the beta
+posterior directly. With <code>bin_method = &quot;normal&quot;</code>, it uses a
+normal approximation to the posterior mean or treatment-control
+difference. With <code>bin_method = &quot;quadrature&quot;</code>, it uses
+numerical integration for the two-arm posterior difference. The argument
+<code>N_mcmc</code> controls the number of Monte Carlo beta draws only
+when <code>bin_method = &quot;mc&quot;</code>.</p>
+</div>
+<div id="loss-to-follow-up-at-the-final-analysis" class="section level3">
+<h3>7.4 Loss to follow-up at the final analysis</h3>
+<p>Interim predictions impute outcomes that are not yet known. At the
+final analysis, <code>imputed_final</code> controls whether subjects
+lost to follow-up are also imputed.</p>
+<p>If <code>imputed_final = TRUE</code>, Bayesian methods
+(<code>method = &quot;bayes-surv&quot;</code> or
+<code>method = &quot;bayes-bin&quot;</code>) analyze each imputed completed
+dataset and average the resulting posterior summaries. Cox regression
+and risk-difference analyses instead pool completed-data scalar
+estimates and variances using Rubin’s rules as described above;
+<code>N_impute</code> must be at least two. Imputed final analyses
+remain unavailable for <code>method = &quot;logrank&quot;</code> because no
+pooling rule is implemented for that test.</p>
+<p>If <code>imputed_final = FALSE</code>, the final analysis uses
+observed right-censored data for methods that can handle censoring
+(<code>logrank</code>, <code>cox</code>, and <code>bayes-surv</code>).
+For <code>riskdiff</code> and <code>bayes-bin</code>, lost-to-follow-up
+subjects are excluded because these methods require complete binary
+outcomes and have no mechanism for right-censored observations. Rubin
+pooling applies to imputed Cox and risk-difference final analyses; it
+does not alter the interim posterior-predictive calculation, where each
+simulated completed trial is tested separately before the success
+indicators are averaged.</p>
+<p>The loss-to-follow-up mechanism in the simulator is non-informative.
+Designs where dropout may depend on prognosis should be assessed with
+sensitivity analyses outside the default data-generating mechanism.</p>
+</div>
+</div>
+<div id="operating-characteristics" class="section level2">
+<h2>8. Operating characteristics</h2>
+<p>A Goldilocks design is calibrated by simulation. A single simulated
+trial describes one possible path; the design is characterized by
+repeated simulation over clinically relevant scenarios.</p>
+<p>For a candidate design, <code>sim_trials()</code> repeatedly calls
+<code>survival_adapt()</code> and <code>summarise_sims()</code>
+estimates:</p>
+<ul>
+<li>power, or type I error under a null scenario;</li>
+<li>probability of stopping for expected success;</li>
+<li>probability of stopping for futility;</li>
+<li>probability of reaching <span class="math inline">\(N_{\max}\)</span>;</li>
+<li>mean and standard deviation of enrolled sample size; and</li>
+<li>probability of stopping for expected success but failing at the
+final analysis.</li>
+</ul>
+<p>Let <span class="math inline">\(R = 1,\ldots,R_{\max}\)</span> index
+simulated trials under a scenario <span class="math inline">\(\theta\)</span>, where <span class="math inline">\(\theta\)</span> denotes the data-generating
+parameters such as control hazard, treatment hazard, accrual rate,
+loss-to-follow-up rate, and follow-up duration. The trial-level random
+variables are:</p>
+<table>
+<colgroup>
+<col width="11%" />
+<col width="88%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(N_R\)</span></td>
+<td>enrolled sample size in simulated trial <span class="math inline">\(R\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(E_R\)</span></td>
+<td>indicator that trial <span class="math inline">\(R\)</span> stopped
+accrual for expected success</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(F_R\)</span></td>
+<td>indicator that trial <span class="math inline">\(R\)</span> stopped
+for futility</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(Z_R\)</span></td>
+<td>final success indicator in trial <span class="math inline">\(R\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Let <span class="math inline">\(\Theta_0\)</span> denote the null
+parameter space, i.e. the set of data-generating scenarios in which the
+treatment does not satisfy the alternative hypothesis. For a two-arm
+superiority trial this includes scenarios with no beneficial treatment
+effect; in practice, it should be explored across plausible nuisance
+parameters such as control event rates and accrual rates. The main
+operating characteristics are</p>
+<p><span class="math display">\[\operatorname{Power}(\theta)
+  = \Pr_\theta(Z_R = 1, F_R = 0),\]</span></p>
+<p><span class="math display">\[\operatorname{Type\ I\ error}(\theta_0)
+  = \Pr_{\theta_0}(Z_R = 1, F_R = 0), \qquad \theta_0 \in
+\Theta_0,\]</span></p>
+<p><span class="math display">\[\Pr_\theta(\textrm{stop for expected
+success}) = \Pr_\theta(E_R = 1),\]</span></p>
+<p><span class="math display">\[\Pr_\theta(\textrm{stop for futility}) =
+\Pr_\theta(F_R = 1),\]</span></p>
+<p>and</p>
+<p><span class="math display">\[\operatorname{E}_\theta(N_R), \qquad
+  \operatorname{Var}_\theta(N_R).\]</span></p>
+<p>The <code>stop_and_fail</code> summary estimates</p>
+<p><span class="math display">\[\Pr_\theta(E_R = 1, Z_R =
+0),\]</span></p>
+<p>which is the probability that accrual stops for expected success but
+the final analysis does not meet the success criterion.</p>
+<p>The basic workflow is:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">hazard_control   =</span> hc,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">cutpoints        =</span> cutpoints,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">N_total          =</span> N_total,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">lambda           =</span> lambda,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">lambda_time      =</span> lambda_time,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">interim_look     =</span> interim_look,</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">end_of_study     =</span> end_of_study,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">prior_surv       =</span> prior_surv,</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">Fn               =</span> Fn,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">Sn               =</span> Sn,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">prob_ha          =</span> prob_ha,</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">N_impute         =</span> N_impute,</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">N_mcmc           =</span> N_mcmc,</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="at">N_trials         =</span> N_trials,</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">method           =</span> method,</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">12345</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="fu">summarise_sims</span>(out<span class="sc">$</span>sims)</span></code></pre></div>
+<div id="visual-diagnostics" class="section level3">
+<h3>8.1 Visual diagnostics</h3>
+<p>The simulation plotting functions expose three different levels of
+the design:</p>
+<ul>
+<li><code>plot_sim_ocs()</code> compares final success, stopping
+probabilities, and mean sample size across data-generating
+scenarios.</li>
+<li><code>plot_sim_stopping()</code> expands one scenario into marginal,
+conditional, or cumulative stopping summaries, or a count-based
+flowchart through successive looks.</li>
+<li><code>plot_sim_decisions()</code> examines the joint interim
+predictive probabilities and the decision thresholds at each look.</li>
+</ul>
+<p>For operating-characteristic curves, first attach a numeric effect
+scale to the scenario summary. The package does not infer this
+automatically because the appropriate scale may be a hazard ratio, risk
+difference, survival probability, or event probability depending on the
+analysis:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>scenario_oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="st">&quot;null&quot;</span> <span class="ot">=</span> null_sims<span class="sc">$</span>sims,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="st">&quot;moderate&quot;</span> <span class="ot">=</span> moderate_sims<span class="sc">$</span>sims,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="st">&quot;target&quot;</span> <span class="ot">=</span> target_sims<span class="sc">$</span>sims</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>))</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>scenario_oc<span class="sc">$</span>true_effect <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="sc">-</span><span class="fl">0.10</span>, <span class="sc">-</span><span class="fl">0.20</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  scenario_oc,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_effect&quot;</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment-control event-probability difference&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>)</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(target_sims)</span></code></pre></div>
+<p>Decision maps require the optional simulation traces:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>target_sims_traced <span class="ot">&lt;-</span> <span class="fu">update</span>(target_sims, <span class="at">return_trace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(target_sims_traced, <span class="at">type =</span> <span class="st">&quot;flowchart&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(target_sims_traced)</span></code></pre></div>
+<p>Retaining traces does not change the trial summaries or random-number
+path, but it increases the output size. Trace-recorded sample sizes also
+let conditional, cumulative, and flowchart stopping views display
+reached looks at which no trial stopped. Traces are therefore usually
+most useful for selected scenarios after a broad
+operating-characteristic grid has been screened.</p>
+<p>Broglio et al. emphasize that type I error for this class of adaptive
+design should be examined across the null space, not only at one
+convenient null scenario. For time-to-event endpoints, the relevant null
+space includes plausible control event rates and accrual rates. Accrual
+rate is especially important because rapid enrollment can leave little
+endpoint information available at interim looks, increasing the
+uncertainty in both <span class="math inline">\(\widehat{P}_{n_\ell}\)</span> and <span class="math inline">\(\widehat{P}_{\max,\ell}\)</span>. The follow-up
+period after accrual stops also affects operating characteristics
+because it determines how much additional information is observed before
+the final analysis.</p>
+<p>The Monte Carlo sizes <code>N_impute</code>, <code>N_mcmc</code>, and
+<code>N_trials</code> should be chosen so that simulation error is small
+relative to the decision being made. Small values are appropriate for
+examples and package tests, but final design calibration usually
+requires many more trials and imputations.</p>
+</div>
+</div>
+<div id="threshold-selection" class="section level2">
+<h2>9. Threshold selection</h2>
+<p>The thresholds <span class="math inline">\(S_\ell\)</span> and <span class="math inline">\(F_\ell\)</span> may be constant across looks or
+may vary by look. They interact with the final analysis threshold,
+number and timing of looks, endpoint delay, accrual rate, loss to
+follow-up, prior distribution, and maximum sample size.</p>
+<p>If type I error is too high, possible remedies include increasing
+<code>prob_ha</code>, increasing the expected-success thresholds,
+reducing the number of looks, or altering follow-up requirements. If
+power is too low, the maximum sample size, futility threshold,
+expected-success threshold, or final analysis threshold may need
+reconsideration. Each change should be rechecked under null and
+alternative scenarios.</p>
+<p>The quantity <code>stop_and_fail</code> is particularly useful when
+tuning <span class="math inline">\(S_\ell\)</span>. It estimates how
+often a trial stops accrual for expected success but does not meet the
+final success criterion after follow-up is complete. If this is too
+large, the expected-success threshold is usually too permissive for the
+amount of uncertainty present at interim looks.</p>
+</div>
+<div id="relation-to-group-sequential-designs" class="section level2">
+<h2>10. Relation to group-sequential designs</h2>
+<p>A group-sequential design usually indexes interim analyses by
+information, such as the number of observed events, and may stop
+immediately for efficacy when a boundary is crossed. A Goldilocks design
+indexes sample-size selection analyses by enrolled sample size and
+explicitly incorporates future follow-up of the currently enrolled
+cohort.</p>
+<p>This distinction matters for delayed outcomes. A trial may enroll
+many subjects before accumulating enough events for an event-driven
+interim analysis. Goldilocks uses the partial information available
+during accrual to decide whether additional subjects are needed, while
+preserving a single preplanned final analysis after the enrolled
+subjects have completed follow-up.</p>
+</div>
+<div id="package-specific-scope" class="section level2">
+<h2>11. Package-specific scope</h2>
+<p>The time-to-event example in Broglio et al. (2014) uses a
+Gamma-exponential prediction model. <code>goldilocks</code> extends this
+to a piecewise-exponential model, so the hazard may change at
+prespecified cut-points. This can be useful when there is a clinically
+plausible early-risk period, but each additional interval adds
+parameters and can make interim posteriors more diffuse.</p>
+<p>The package also supports single-arm Bayesian Goldilocks designs by
+replacing the concurrent control with an external benchmark <span class="math inline">\(h_0\)</span>, often referred to as a performance
+goal (PG) or objective performance criterion (OPC). This is convenient
+for early-phase, rare-disease, or proof-of-concept settings, but
+validity then depends on the benchmark being transportable to the
+enrolled population.</p>
+<p>For complete binary endpoints, <code>method = &quot;bayes-bin&quot;</code>
+replaces the piecewise-exponential final analysis with a conjugate
+beta-binomial analysis. The interim prediction machinery still imputes
+not-yet-observed endpoint statuses from the event-time model, so users
+should specify data-generating hazards that are clinically meaningful
+for the binary endpoint time.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Broglio KR, Connor JT, Berry SM. Not too big, not too small: a
+Goldilocks approach to sample size selection. <em>Journal of
+Biopharmaceutical Statistics</em>, 2014; <strong>24(3)</strong>:
+685-705. <a href="doi:10.1080/10543406.2014.888569" class="uri">doi:10.1080/10543406.2014.888569</a>.</p>
+<p>U.S. Food and Drug Administration. <em>Adaptive Design Clinical
+Trials for Drugs and Biologics Guidance for Industry</em>. December
+2019. <a href="https://www.fda.gov/regulatory-information/search-fda-guidance-documents/adaptive-design-clinical-trials-drugs-and-biologics-guidance-industry" class="uri">https://www.fda.gov/regulatory-information/search-fda-guidance-documents/adaptive-design-clinical-trials-drugs-and-biologics-guidance-industry</a>.</p>
+<p>U.S. Food and Drug Administration. <em>Guidance for the Use of
+Bayesian Statistics in Medical Device Clinical Trials</em>. February 5,
+2010. <a href="https://www.fda.gov/media/71512/download" class="uri">https://www.fda.gov/media/71512/download</a>.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

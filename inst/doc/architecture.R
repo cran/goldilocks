@@ -16,17 +16,25 @@ digraph goldilocks {
   sim_trials       [label = 'sim_trials()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   survival_adapt   [label = 'survival_adapt()',   fillcolor = '#dae8fc', color = '#6c8ebf']
   summarise_sims   [label = 'summarise_sims()',   fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_enrollment  [label = 'plot_enrollment()',  fillcolor = '#dae8fc', color = '#6c8ebf']
+  summarise_trial_trace [label = 'summarise_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_trial_trace [label = 'plot_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_stopping [label = 'plot_sim_stopping()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_ocs      [label = 'plot_sim_ocs()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_decisions [label = 'plot_sim_decisions()', fillcolor = '#dae8fc', color = '#6c8ebf']
   sim_comp_data    [label = 'sim_comp_data()',    fillcolor = '#dae8fc', color = '#6c8ebf']
   enrollment       [label = 'enrollment()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   randomization    [label = 'randomization()',    fillcolor = '#dae8fc', color = '#6c8ebf']
   pwe_sim          [label = 'pwe_sim()',          fillcolor = '#dae8fc', color = '#6c8ebf']
   pwe_impute       [label = 'pwe_impute()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   ppwe             [label = 'ppwe()',             fillcolor = '#dae8fc', color = '#6c8ebf']
+  prop_to_haz      [label = 'prop_to_haz()',      fillcolor = '#dae8fc', color = '#6c8ebf']
 
   # Internal functions (grey)
   test_stop_success [label = 'test_stop_success()', fillcolor = '#f5f5f5', color = '#999999']
   test_final        [label = 'test_final()',         fillcolor = '#f5f5f5', color = '#999999']
   analyse_data      [label = 'analyse_data()',       fillcolor = '#f5f5f5', color = '#999999']
+  bayes_binomial_test [label = 'bayes_binomial_test()', fillcolor = '#f5f5f5', color = '#999999']
   impute_data       [label = 'impute_data()',        fillcolor = '#f5f5f5', color = '#999999']
   posterior          [label = 'posterior()',           fillcolor = '#f5f5f5', color = '#999999']
   haz_to_prop       [label = 'haz_to_prop()',        fillcolor = '#f5f5f5', color = '#999999']
@@ -35,11 +43,18 @@ digraph goldilocks {
   # Edges
   sim_trials      -> survival_adapt
   sim_trials      -> summarise_sims  [style = dashed, label = 'output list']
+  sim_trials      -> plot_sim_stopping [style = dashed, label = 'simulation output']
+  sim_trials      -> plot_sim_decisions [style = dashed, label = 'simulation traces']
+  sim_trials      -> plot_enrollment [style = dashed, label = 'stored design']
+  summarise_sims  -> plot_sim_ocs [style = dashed, label = 'scenario summaries']
 
   survival_adapt  -> sim_comp_data
   survival_adapt  -> posterior
   survival_adapt  -> test_stop_success
   survival_adapt  -> test_final
+  survival_adapt  -> summarise_trial_trace [style = dashed, label = 'optional trace']
+  survival_adapt  -> plot_trial_trace [style = dashed, label = 'optional trace']
+  survival_adapt  -> plot_enrollment [style = dashed, label = 'stored design']
 
   sim_comp_data   -> enrollment
   sim_comp_data   -> randomization
@@ -54,9 +69,11 @@ digraph goldilocks {
 
   analyse_data    -> posterior
   analyse_data    -> haz_to_prop
+  analyse_data    -> bayes_binomial_test
   analyse_data    -> logrank_test
 
   haz_to_prop     -> ppwe
+  prop_to_haz     -> sim_comp_data [style = dashed, label = 'hazard inputs']
 
   impute_data     -> pwe_impute
   impute_data     -> pwe_sim

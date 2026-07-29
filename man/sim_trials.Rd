@@ -8,19 +8,21 @@ parameters and treatment effect}
 sim_trials(
   hazard_treatment,
   hazard_control = NULL,
-  cutpoints = 0,
+  cutpoints = NULL,
   N_total,
   lambda = 0.3,
-  lambda_time = 0,
+  lambda_time = NULL,
   interim_look = NULL,
   end_of_study,
-  prior = c(0.1, 0.1),
+  prior_surv = c(0.1, 0.1),
+  prior_bin = c(1, 1),
+  bin_method = "mc",
   block = 2,
   rand_ratio = c(1, 1),
   prop_loss = 0,
-  alternative = "two.sided",
+  alternative = "greater",
   h0 = 0,
-  Fn = 0.1,
+  Fn = 0.05,
   Sn = 0.9,
   prob_ha = 0.95,
   N_impute = 10,
@@ -28,55 +30,73 @@ sim_trials(
   N_trials = 10,
   method = "logrank",
   imputed_final = FALSE,
-  ncores = 1L
+  empty_interval = c("propagate", "prior", "error"),
+  return_trace = FALSE,
+  ncores = 1L,
+  backend = c("auto", "fork", "psock", "sequential"),
+  seed = NULL,
+  binary_imputation = c("event-time", "bernoulli"),
+  prior_surv_final = prior_surv
 )
 }
 \arguments{
-\item{hazard_treatment}{vector. Constant hazard rates under the treatment
-arm.}
+\item{hazard_treatment}{vector. Finite non-negative constant hazard rates
+under the treatment arm.}
 
-\item{hazard_control}{vector. Constant hazard rates under the control arm.}
+\item{hazard_control}{vector. Finite non-negative constant hazard rates
+under the control arm.}
 
-\item{cutpoints}{vector. Times at which the baseline hazard changes. Default
-is \code{cutpoints = 0}, which corresponds to a simple (non-piecewise)
-exponential model.}
+\item{cutpoints}{finite, positive, strictly increasing interior times at
+which the baseline hazard changes. The number of hazards for each arm must
+be one greater than the number of cutpoints. Default is \code{NULL}, which
+corresponds to a simple (non-piecewise) exponential model.}
 
 \item{N_total}{integer. Maximum sample size allowable}
 
-\item{lambda}{vector. Enrollment rates across simulated enrollment times. See
-\code{\link{enrollment}} for more details.}
+\item{lambda}{finite positive enrollment rates per unit time. Supply one rate
+for each interval defined by \code{lambda_time}. See \code{\link[=enrollment]{enrollment()}} for the
+precise continuous-time process and time-origin convention.}
 
-\item{lambda_time}{vector. Enrollment time(s) at which the enrollment rates
-change. Must be same length as lambda. See \code{\link{enrollment}} for
-more details.}
+\item{lambda_time}{\code{NULL}, or finite, positive, strictly increasing internal
+times at which the enrollment rate changes. The initial boundary at zero
+is implicit, so \code{length(lambda)} must equal \code{length(lambda_time) + 1}.}
 
 \item{interim_look}{vector. Sample size for each interim look. Note: the
 maximum sample size should not be included. For two-arm designs, each
 interim look must be at least the (largest) block size (see \code{block}),
-ensuring both treatment arms are present at every interim analysis; a
-smaller look could enrol subjects from a single arm only, leaving the
-interim posterior undefined for the missing arm.}
+ensuring both treatment groups are present at every interim analysis; a
+smaller look could enroll subjects from one treatment group only, leaving
+the interim posterior undefined for the missing group.}
 
-\item{end_of_study}{scalar. Length of the study; i.e. time at which endpoint
-will be evaluated.}
+\item{end_of_study}{finite study endpoint, strictly greater than the last
+cutpoint.}
 
-\item{prior}{vector. The prior distributions for the piecewise hazard rate
-parameters are each \eqn{Gamma(a_0, b_0)}, where \eqn{a_0} is the shape
-parameter and \eqn{b_0} is the rate parameter (i.e., the inverse of the
-scale). This follows R's \code{\link[stats]{rgamma}} parameterization. The
-same prior is applied to all piecewise intervals and to both treatment
-arms. The default non-informative prior distribution used is
-\code{Gamma(0.1, 0.1)}, which is specified by setting \code{prior = c(0.1,
-  0.1)}.}
+\item{prior_surv}{numeric vector or matrix. Gamma prior for the
+piecewise-exponential hazards used during interim prediction. A length-two
+vector supplies shape and rate and is broadcast across all intervals. A
+\code{2} by \code{length(cutpoints) + 1} matrix supplies interval-specific values,
+with shapes in row 1, rates in row 2, and columns ordered from the earliest
+to the latest interval. The same interval prior is applied to both
+treatment groups. Rates must use the same time unit as event times,
+exposure, and cutpoints. The default is \code{c(0.1, 0.1)}.}
+
+\item{prior_bin}{vector. Prior distribution for the event probability when
+\code{method = "bayes-bin"}. The two values are the shape parameters of the
+\code{Beta(a, b)} prior. The same prior is applied to both treatment arms.}
+
+\item{bin_method}{character. Method used to calculate the posterior
+probability for \code{method = "bayes-bin"}, must be one of \code{"mc"} (Monte Carlo
+sampling), \code{"normal"} (normal approximation), or \code{"quadrature"} (numerical
+integration). The default is \code{"mc"}.}
 
 \item{block}{scalar. Block size for generating the randomization schedule.}
 
 \item{rand_ratio}{vector. Randomization allocation for the ratio of control
 to treatment. Integer values mapping the size of the block. See
-\code{\link{randomization}} for more details.}
+\code{\link[=randomization]{randomization()}} for more details.}
 
 \item{prop_loss}{scalar. Overall proportion of subjects lost to follow-up.
-Subjects are selected at random for LTFU regardless of treatment arm or
+Subjects are selected at random for LTFU regardless of treatment assignment or
 event status. Each LTFU subject's observed time is drawn from a
 \code{Uniform(0, t)} distribution, where \code{t} is their potential
 event or censoring time. Since the LTFU time is always less than
@@ -85,61 +105,127 @@ right-censored. Defaults to zero.}
 
 \item{alternative}{character. The string specifying the alternative
 hypothesis, must be one of \code{"greater"} (default), \code{"less"} or
-\code{"two.sided"}. All three options are supported for \code{method =
-  "bayes"}, \code{"logrank"}, and \code{"cox"}. The chi-square test
-(\code{method = "chisq"}) only supports \code{"two.sided"}. For survival
-outcomes, \code{"less"} corresponds to the treatment group having a lower
+\code{"two.sided"}. One-sided alternatives (\code{"greater"} and \code{"less"}) are
+supported for \code{method = "bayes-surv"} and \code{method = "bayes-bin"}. All three
+options are supported for \code{method = "logrank"}, \code{method = "cox"}, and
+\code{method = "riskdiff"}. For
+survival outcomes, \code{"less"} corresponds to the treatment arm having a lower
 cumulative incidence (i.e., treatment is beneficial), and \code{"greater"}
-corresponds to the treatment group having a higher cumulative incidence.}
+corresponds to the treatment arm having a higher cumulative incidence.}
 
-\item{h0}{scalar. Null hypothesis value of \eqn{p_\textrm{treatment} -
-  p_\textrm{control}} when \code{method = "bayes"}. Default is \code{h0 = 0}.
-The argument is ignored when \code{method = "logrank"} or \code{= "cox"};
-in those cases the usual test of non-equal hazards is assumed.}
+\item{h0}{single finite numeric null hypothesis value or margin. Default is
+\code{h0 = 0}. For Bayesian analyses, \code{h0} must lie in \verb{[0, 1]} for a
+single-arm design and \verb{[-1, 1]} for a two-arm design.
+\itemize{
+\item When \code{method = "bayes-surv"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}}. In a single-arm design,
+\code{h0} is the external benchmark event probability, often referred to
+as a performance goal (PG) or objective performance criterion (OPC).
+\item When \code{method = "bayes-bin"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}} for a two-arm design, or
+the null event probability for a single-arm design.
+\item When \code{method = "cox"}, \code{h0} is the null log hazard ratio for
+treatment versus control. Use \code{h0 = 0} for the usual hazard ratio
+of 1 null, or \code{h0 = log(margin)} for a non-inferiority margin
+specified as a hazard ratio. A Cox non-inferiority test should usually
+use \code{alternative = "less"}.
+\item When \code{method = "riskdiff"}, \code{h0} is the null value of
+\eqn{p_\textrm{treatment} - p_\textrm{control}} and must lie in
+\verb{[-1, 1]}.
+\item The argument is ignored for \code{method = "logrank"} after its finite-value
+validation; the usual equal-survival null hypothesis is used.
+}}
 
-\item{Fn}{vector of \code{[0, 1]} values. Each element is the probability
+\item{Fn}{vector of values between 0 and 1. Each element is the probability
 threshold to stop at the \eqn{i}-th look early for futility. If there are
 no interim looks (i.e. \code{interim_look = NULL}), then \code{Fn} is not
-used in the simulations or analysis. The length of \code{Fn} should be the
-same as \code{interim_look}, else the values are recycled.}
+used in the simulations or analysis. Set \code{Fn = 0} to disable futility
+monitoring. The length of \code{Fn} should be the same as
+\code{interim_look}, else the values are recycled.}
 
-\item{Sn}{vector of \code{[0, 1]} values. Each element is the probability
+\item{Sn}{vector of values between 0 and 1. Each element is the probability
 threshold to stop at the \eqn{i}-th look early for expected success. If
 there are no interim looks (i.e. \code{interim_look = NULL}), then
 \code{Sn} is not used in the simulations or analysis. The length of
 \code{Sn} should be the same as \code{interim_look}, else the values are
 recycled.}
 
-\item{prob_ha}{scalar \code{[0, 1]}. Probability threshold of alternative
+\item{prob_ha}{scalar value between 0 and 1. Probability threshold of alternative
 hypothesis.}
 
 \item{N_impute}{integer. Number of imputations for Monte Carlo simulation of
-missing data.}
+missing data. An imputed Cox or risk-difference final analysis requires at
+least two.}
 
-\item{N_mcmc}{integer. Number of samples to draw from the posterior
-distribution when using a Bayesian test (\code{method = "bayes"}).}
+\item{N_mcmc}{integer. Number of posterior samples used by
+\code{method = "bayes-surv"} and by \code{method = "bayes-bin"} when
+\code{bin_method = "mc"}.}
 
 \item{N_trials}{integer. Number of trials to simulate.}
 
 \item{method}{character. For an imputed data set (or the final data set after
 follow-up is complete), whether the analysis should be a log-rank
 (\code{method = "logrank"}) test, Cox proportional hazards regression model
-Wald test (\code{method = "cox"}), a fully-Bayesian analysis (\code{method
-  = "bayes"}), or a chi-square test (\code{method = "chisq"}). See Details
-section.}
+Wald test (\code{method = "cox"}), a fully-Bayesian piecewise-exponential
+analysis (\code{method = "bayes-surv"}), a Bayesian beta-binomial analysis of
+complete binary outcomes (\code{method = "bayes-bin"}), or a frequentist
+risk-difference Wald test of complete binary outcomes (\code{method = "riskdiff"}). See Details section.}
 
 \item{imputed_final}{logical. Should the final analysis (after all subjects
 have been followed-up to the study end) be based on imputed outcomes for
-subjects who were LTFU (i.e. right-censored with time
-\code{<end_of_study})? Default is \code{TRUE}. Setting to \code{FALSE}
-means that the final analysis would incorporate right-censoring.}
+subjects who were LTFU (i.e. right-censored with time less than
+\code{end_of_study})? Default is \code{FALSE}, which means that the final analysis
+incorporates right-censoring. With \code{method = "cox"} or \code{method = "riskdiff"}, setting this to \code{TRUE} analyzes each imputed dataset and pools
+the scalar treatment effects and variances using Rubin's rules; this
+requires \code{N_impute >= 2}. Imputed final analyses remain unavailable for
+\code{method = "logrank"}.}
 
-\item{ncores}{integer. Number of cores to use for parallel processing.}
+\item{empty_interval}{character. Policy for empty piecewise-exponential
+intervals in \code{method = "bayes-surv"} posterior calculations. An empty
+interval is an interval with no exposed subjects in a treatment arm at the
+analysis time. \code{"propagate"} (the default, matching earlier package
+behavior) copies exposure time and event counts from the nearest non-empty
+interval in the same treatment arm and emits a warning. \code{"prior"} leaves
+the interval at zero exposure time and zero events, so its posterior is
+driven only by its assigned survival prior. \code{"error"} stops when any empty
+interval is found.}
+
+\item{return_trace}{logical. Should the compact interim decision trace from
+every simulated trial be retained? The default, \code{FALSE}, preserves the
+compact output. When \code{TRUE}, the returned list also contains a \code{traces}
+data frame with a \code{trial} column linking each trace row to the corresponding
+row of \code{sims}.}
+
+\item{ncores}{positive integer. Number of cores to use for parallel
+processing. Defaults to \code{1L} (serial execution).}
+
+\item{backend}{character. Parallel backend. "auto" (the default) uses
+serial execution for \code{ncores = 1}, the existing fork backend on Unix-like
+platforms, and a PSOCK cluster on Windows. "fork", "psock", and
+"sequential" select a backend explicitly.}
+
+\item{seed}{optional integer. Seed used to generate independent per-trial
+\code{"L'Ecuyer-CMRG"} random-number streams. The default, \code{NULL},
+does not reset the global RNG state, preserving the usual unseeded
+simulation behavior.}
+
+\item{binary_imputation}{character. Predictive imputation approach for
+\code{method = "bayes-bin"} or \code{method = "riskdiff"}. \code{"event-time"} (the default)
+draws a conditional piecewise-exponential event time and reduces it to
+event status at \code{end_of_study}. \code{"bernoulli"} draws the endpoint status
+directly from its conditional event probability. This argument is ignored
+for time-to-event analysis methods.}
+
+\item{prior_surv_final}{numeric vector or matrix. Gamma prior used for
+final-stage piecewise-exponential imputation and, for \code{method = "bayes-surv"}, final analysis. It accepts the same forms as \code{prior_surv}
+and defaults to \code{prior_surv}, preserving the historical behavior.}
 }
 \value{
-Data frame with 1 row per simulated trial and columns for key summary
-statistics. See \code{\link{survival_adapt}} for details of what is
-returned in each row.
+A list containing \code{sims}, a data frame with one row per simulated
+trial, and \code{call}. When \code{return_trace = TRUE}, the list also contains
+\code{traces}, a data frame with one row per completed interim look and a
+\code{trial} identifier. See \code{\link[=survival_adapt]{survival_adapt()}} for details of the summary and
+trace columns.
 }
 \description{
 Simulate multiple clinical trials with fixed input parameters,
@@ -147,29 +233,39 @@ and tidily extract the relevant data to generate operating characteristics.
 }
 \details{
 This is basically a wrapper function for
-\code{\link{survival_adapt}}, whereby we repeatedly run the function for a
-independent number of trials (all with the same input design parameters and
-treatment effect).
+\code{\link[=survival_adapt]{survival_adapt()}}, whereby we repeatedly run the function for independent
+trials (all with the same input design parameters and treatment effect).
 
-To use will multiple cores (where available), the argument \code{ncores}
-can be increased from the default of 1. Note: on Windows machines, it is
-not possible to use the \code{\link[parallel]{mclapply}} function with
-\code{ncores} \eqn{>1}.
+To use multiple cores (where available), the argument \code{ncores}
+can be increased from the default of 1. The default \code{backend = "auto"}
+uses \code{\link[pbmcapply:pbmclapply]{pbmcapply::pbmclapply()}} on Unix-like platforms and a PSOCK cluster
+on Windows, where forked processes are unavailable. Set \code{backend}
+explicitly to compare backends or to require serial execution.
+
+Set \code{seed} to make \code{sim_trials()} reproducible. When a seed is
+supplied, \code{sim_trials()} first generates one independent
+\code{"L'Ecuyer-CMRG"} stream for each simulated trial, then each call to
+\code{\link[=survival_adapt]{survival_adapt()}} runs with its own per-trial stream. This avoids
+reusing the same random-number stream across workers when
+\code{ncores > 1}, and produces identical seeded results across supported
+backends. A seeded call restores the caller's RNG state on exit. With
+\code{seed = NULL}, the function uses and advances R's current global RNG
+state.
 }
 \examples{
-hc <- prop_to_haz(c(0.20, 0.30), c(0, 12), 36)
-ht <- prop_to_haz(c(0.05, 0.15), c(0, 12), 36)
+hc <- prop_to_haz(c(0.20, 0.30), 12, 36)
+ht <- prop_to_haz(c(0.05, 0.15), 12, 36)
 
 out <- sim_trials(
   hazard_treatment = ht,
   hazard_control = hc,
-  cutpoints = c(0, 12),
+  cutpoints = 12,
   N_total = 600,
   lambda = 20,
-  lambda_time = 0,
+  lambda_time = NULL,
   interim_look = c(400, 500),
   end_of_study = 36,
-  prior = c(0.1, 0.1),
+  prior_surv = c(0.1, 0.1),
   block = 2,
   rand_ratio = c(1, 1),
   prop_loss = 0.30,
@@ -182,5 +278,7 @@ out <- sim_trials(
   N_mcmc = 5,
   method = "logrank",
   N_trials = 2,
-  ncores = 1)
+  ncores = 1,
+  backend = "auto",
+  seed = 123)
 }

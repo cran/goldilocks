@@ -1,8 +1,8 @@
 ---
-title: "Package Architecture"
+title: "Package architecture"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Package Architecture}
+  %\VignetteIndexEntry{Package architecture}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,18 +16,13 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-The `goldilocks` package implements the Goldilocks adaptive trial design
-described in Broglio et al. (2014). This vignette provides a visual overview
-of how the package functions are interconnected.
+The `goldilocks` package implements the Goldilocks adaptive trial design described in Broglio et al. (2014). This vignette provides a visual overview of how the package functions are interconnected.
 
 ## Function dependency diagram
 
-The diagram below shows the call graph from the top-level simulation
-function (`sim_trials()`) down through the core engine
-(`survival_adapt()`) and into the internal analysis pipeline.
+The diagram below shows the call graph from the top-level simulation function (`sim_trials()`) down through the core engine (`survival_adapt()`) and into the internal analysis pipeline.
 
-**Exported functions** are shown in blue. **Internal functions** are shown
-in grey.
+**Exported functions** are shown in blue. **Internal functions** are shown in grey.
 
 ```{r, echo = FALSE, fig.width = 8, fig.height = 8, fig.alt = "Diagram showing the function call dependencies in the goldilocks package."}
 DiagrammeR::grViz("
@@ -41,17 +36,25 @@ digraph goldilocks {
   sim_trials       [label = 'sim_trials()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   survival_adapt   [label = 'survival_adapt()',   fillcolor = '#dae8fc', color = '#6c8ebf']
   summarise_sims   [label = 'summarise_sims()',   fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_enrollment  [label = 'plot_enrollment()',  fillcolor = '#dae8fc', color = '#6c8ebf']
+  summarise_trial_trace [label = 'summarise_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_trial_trace [label = 'plot_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_stopping [label = 'plot_sim_stopping()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_ocs      [label = 'plot_sim_ocs()', fillcolor = '#dae8fc', color = '#6c8ebf']
+  plot_sim_decisions [label = 'plot_sim_decisions()', fillcolor = '#dae8fc', color = '#6c8ebf']
   sim_comp_data    [label = 'sim_comp_data()',    fillcolor = '#dae8fc', color = '#6c8ebf']
   enrollment       [label = 'enrollment()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   randomization    [label = 'randomization()',    fillcolor = '#dae8fc', color = '#6c8ebf']
   pwe_sim          [label = 'pwe_sim()',          fillcolor = '#dae8fc', color = '#6c8ebf']
   pwe_impute       [label = 'pwe_impute()',       fillcolor = '#dae8fc', color = '#6c8ebf']
   ppwe             [label = 'ppwe()',             fillcolor = '#dae8fc', color = '#6c8ebf']
+  prop_to_haz      [label = 'prop_to_haz()',      fillcolor = '#dae8fc', color = '#6c8ebf']
 
   # Internal functions (grey)
   test_stop_success [label = 'test_stop_success()', fillcolor = '#f5f5f5', color = '#999999']
   test_final        [label = 'test_final()',         fillcolor = '#f5f5f5', color = '#999999']
   analyse_data      [label = 'analyse_data()',       fillcolor = '#f5f5f5', color = '#999999']
+  bayes_binomial_test [label = 'bayes_binomial_test()', fillcolor = '#f5f5f5', color = '#999999']
   impute_data       [label = 'impute_data()',        fillcolor = '#f5f5f5', color = '#999999']
   posterior          [label = 'posterior()',           fillcolor = '#f5f5f5', color = '#999999']
   haz_to_prop       [label = 'haz_to_prop()',        fillcolor = '#f5f5f5', color = '#999999']
@@ -60,11 +63,18 @@ digraph goldilocks {
   # Edges
   sim_trials      -> survival_adapt
   sim_trials      -> summarise_sims  [style = dashed, label = 'output list']
+  sim_trials      -> plot_sim_stopping [style = dashed, label = 'simulation output']
+  sim_trials      -> plot_sim_decisions [style = dashed, label = 'simulation traces']
+  sim_trials      -> plot_enrollment [style = dashed, label = 'stored design']
+  summarise_sims  -> plot_sim_ocs [style = dashed, label = 'scenario summaries']
 
   survival_adapt  -> sim_comp_data
   survival_adapt  -> posterior
   survival_adapt  -> test_stop_success
   survival_adapt  -> test_final
+  survival_adapt  -> summarise_trial_trace [style = dashed, label = 'optional trace']
+  survival_adapt  -> plot_trial_trace [style = dashed, label = 'optional trace']
+  survival_adapt  -> plot_enrollment [style = dashed, label = 'stored design']
 
   sim_comp_data   -> enrollment
   sim_comp_data   -> randomization
@@ -79,9 +89,11 @@ digraph goldilocks {
 
   analyse_data    -> posterior
   analyse_data    -> haz_to_prop
+  analyse_data    -> bayes_binomial_test
   analyse_data    -> logrank_test
 
   haz_to_prop     -> ppwe
+  prop_to_haz     -> sim_comp_data [style = dashed, label = 'hazard inputs']
 
   impute_data     -> pwe_impute
   impute_data     -> pwe_sim
@@ -95,28 +107,30 @@ The functions fall into three layers:
 
 ### Simulation layer
 
-- **`sim_trials()`**: Top-level entry point. Runs `survival_adapt()`
-  across multiple trials (optionally in parallel) and collates results.
-- **`summarise_sims()`**: Summarizes the output of `sim_trials()`,
-  computing operating characteristics such as power, expected sample
-  size, and stopping probabilities.
+-   **`sim_comp_data()`**: Generates a complete trial dataset by calling `enrollment()`, `randomization()`, and `pwe_sim()`.
+-   **`survival_adapt()`**: Simulates a single adaptive trial. Generates data via `sim_comp_data()`, conducts interim analyses using `posterior()` and `test_stop_success()`, and performs the final analysis via `test_final()`. With `return_trace = TRUE`, it also retains a compact audit trail for each completed interim look.
+-   **`sim_trials()`**: Top-level entry point. Runs `survival_adapt()` across multiple trials (optionally in parallel) and collates results.
 
-### Trial engine
+### Post-processing functions
 
-- **`survival_adapt()`**: Simulates a single adaptive trial. Generates
-  data via `sim_comp_data()`, conducts interim analyses using
-  `posterior()` and `test_stop_success()`, and performs the final
-  analysis via `test_final()`.
+-   **`summarise_sims()`**: Summarizes the output of `sim_trials()`, computing operating characteristics such as power, expected sample size, and stopping probabilities.
+-   **`plot_enrollment()`**: Draws the expected enrollment projection, optional simulated trajectories, and interim and maximum-sample-size milestones from explicit arguments or a stored trial design.
+-   **`summarise_trial_trace()`**: Condenses an optional single-trial interim trace into a one-row stopping-path summary.
+-   **`plot_trial_trace()`**: Visualizes predictive probabilities, thresholds, enrollment, and observed events for an optional single-trial trace.
+-   **`plot_sim_stopping()`**: Visualizes marginal, conditional, cumulative, or flowchart stopping outcomes and enrolled sample sizes across simulated trials.
+-   **`plot_sim_ocs()`**: Compares success, stopping, and expected-sample-size operating characteristics across treatment-effect scenarios.
+-   **`plot_sim_decisions()`**: Maps simulated predictive probabilities into expected-success, continuation, and futility regions at each interim look.
 
 ### Data generation and analysis utilities
 
-- **`sim_comp_data()`**: Generates a complete trial dataset by calling
-  `enrollment()`, `randomization()`, and `pwe_sim()`.
-- **`posterior()`**: Estimates the posterior distribution of piecewise
-  exponential hazard rates using a conjugate Gamma model.
-- **`analyse_data()`**: Applies the chosen analysis method (`logrank`,
-  `cox`, `bayes`, or `chisq`) to an (imputed) dataset.
-- **`impute_data()`**: Imputes missing event times for censored subjects
-  using `pwe_impute()` or `pwe_sim()`.
-- **`haz_to_prop()`**: Converts posterior hazard rate draws to
-  cumulative incidence proportions via `ppwe()`.
+-   **`enrollment()`**: Simulates exact continuous-time arrivals under constant or piecewise-constant enrollment rates.
+-   **`randomization()`**: Generates the blocked two-arm treatment allocation.
+-   **`pwe_sim()`** and **`pwe_impute()`**: Simulate event times from, or conditionally impute them under, the piecewise-exponential model.
+-   **`ppwe()`**: Computes cumulative event probabilities under piecewise-exponential hazards.
+-   **`prop_to_haz()`**: Converts cumulative event probabilities at specified times to the corresponding piecewise hazards.
+-   **`posterior()`**: Estimates the posterior distribution of piecewise exponential hazard rates using a conjugate Gamma model.
+-   **`analyse_data()`**: Applies the chosen analysis method (`logrank`, `cox`, `bayes-surv`, `bayes-bin`, or `riskdiff`) to an (imputed) dataset.
+-   **`impute_data()`**: Imputes missing event times for censored subjects using `pwe_impute()` or `pwe_sim()`.
+-   **`haz_to_prop()`**: Converts posterior hazard rate draws to cumulative incidence proportions via `ppwe()`.
+
+The first five utilities in this section are exported for direct use. The final four are internal components of the adaptive analysis pipeline.

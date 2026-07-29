@@ -1,7 +1,8 @@
 ## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  cache.path = "single-arm-cache/"
 )
 set.seed(3081)
 
@@ -21,15 +22,13 @@ ht
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = NULL,              # single-arm
-  cutpoints        = 0,
+  cutpoints        = NULL,
   N_total          = 80,
-  lambda           = 5,                 # enrolments per month (constant)
-  lambda_time      = 0,
+  lambda           = 5,                 # enrollments per month (constant)
+  lambda_time      = NULL,
   interim_look     = 50,
   end_of_study     = end_of_study,
-  prior            = c(0.1, 0.1),       # Gamma(0.1, 0.1) on the hazard
-  block            = 2,                 # default; inert in single-arm mode
-  rand_ratio       = c(1, 1),           # default; inert in single-arm mode
+  prior_surv            = c(0.1, 0.1),       # Gamma(0.1, 0.1) on the hazard
   prop_loss        = 0.05,
   alternative      = "less",
   h0               = benchmark,         # benchmark failure probability
@@ -38,7 +37,7 @@ out <- survival_adapt(
   prob_ha          = 0.95,
   N_impute         = 50,
   N_mcmc           = 2000,
-  method           = "bayes")
+  method           = "bayes-surv")
 
 out
 
@@ -48,15 +47,13 @@ out
 #   N_trials         = 1000,
 #   hazard_treatment = ht,
 #   hazard_control   = NULL,
-#   cutpoints        = 0,
+#   cutpoints        = NULL,
 #   N_total          = 80,
 #   lambda           = 5,
-#   lambda_time      = 0,
+#   lambda_time      = NULL,
 #   interim_look     = 50,
 #   end_of_study     = end_of_study,
-#   prior            = c(0.1, 0.1),
-#   block            = 2,
-#   rand_ratio       = c(1, 1),
+#   prior_surv            = c(0.1, 0.1),
 #   prop_loss        = 0.05,
 #   alternative      = "less",
 #   h0               = benchmark,
@@ -65,23 +62,23 @@ out
 #   prob_ha          = 0.95,
 #   N_impute         = 50,
 #   N_mcmc           = 2000,
-#   method           = "bayes")
+#   method           = "bayes-surv",
+#   return_trace     = TRUE,
+#   seed             = 3082)
 # 
-# # Type I error: simulate under the null (true rate = benchmark = 0.30)
+# # Type I error: simulate under the null (true rate = benchmark/PG/OPC = 0.30)
 # ht_null <- prop_to_haz(probs = benchmark, endtime = end_of_study)
 # out_t1error <- sim_trials(
 #   N_trials         = 1000,
 #   hazard_treatment = ht_null,
 #   hazard_control   = NULL,
-#   cutpoints        = 0,
+#   cutpoints        = NULL,
 #   N_total          = 80,
 #   lambda           = 5,
-#   lambda_time      = 0,
+#   lambda_time      = NULL,
 #   interim_look     = 50,
 #   end_of_study     = end_of_study,
-#   prior            = c(0.1, 0.1),
-#   block            = 2,
-#   rand_ratio       = c(1, 1),
+#   prior_surv            = c(0.1, 0.1),
 #   prop_loss        = 0.05,
 #   alternative      = "less",
 #   h0               = benchmark,
@@ -90,7 +87,21 @@ out
 #   prob_ha          = 0.95,
 #   N_impute         = 50,
 #   N_mcmc           = 2000,
-#   method           = "bayes")
+#   method           = "bayes-surv",
+#   seed             = 3083)
 # 
-# summarise_sims(list(out_power$sims, out_t1error$sims))
+# oc <- summarise_sims(list(
+#   "target event probability" = out_power$sims,
+#   "benchmark event probability" = out_t1error$sims
+# ))
+# oc$true_event_probability <- c(target, benchmark)
+# 
+# oc
+# plot_sim_ocs(
+#   oc,
+#   effect = "true_event_probability",
+#   xlab = "True treatment event probability"
+# )
+# plot_sim_stopping(out_power)
+# plot_sim_decisions(out_power)
 
