@@ -1,6 +1,10 @@
 ---
 title: "Two-arm randomized trials"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    self_contained: false
+    lib_dir: libs
+    css: libs/vignette.css
 vignette: >
   %\VignetteIndexEntry{Two-arm randomized trials}
   %\VignetteEngine{knitr::rmarkdown}
@@ -8,6 +12,7 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+source("shared-vignette-resources.R")
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -15,45 +20,72 @@ knitr::opts_chunk$set(
 load("vignette-sims.rda")
 ```
 
-Broglio et al. (2014) presented an example from a hypothetical trial. We will use a similar setup for this example, and break up the pieces to make clear the argument choices for the package.
+Broglio et al. (2014) presented a hypothetical trial example. We use a similar
+setting and show how each statistical and operational assumption is represented
+in `goldilocks`.
 
-The setting is a two-arm randomized trial where patients are equally randomized to either a control or a treatment arm. The primary endpoint is overall survival (OS) measured from enrollment to death from any cause or last follow-up. In `goldilocks`, enrollment time and randomization time are treated as the same time point; in practice they can differ, but that distinction is superfluous and therefore not represented in the package simulator. The expected OS rate at 12-months for the control arm is 30%. The minimum sample size is 100 and the maximum sample size is 300. For simplicity, it is assumed that there is no attrition. The maximum follow-up period for each subject is 12-months. This differs from the time-to-event example in Broglio et al. (2014), which scheduled the primary analysis after accrual was complete and all subjects had then completed 12 months of follow-up. Thus, if accrual is stopped early for predicted success or the trial continues accrual to the maximum sample size of 300 patients, the primary analysis of OS will be conducted after each subject has completed 12-months of follow-up.
+## Design assumptions
+
+The setting is a two-arm trial with equal randomization to control or treatment.
+The primary endpoint is overall survival (OS), measured from enrollment to
+death from any cause or last follow-up. The simulation treats enrollment and
+randomization as occurring at the same time. The assumed 12-month OS
+probability in the control arm is 30%. The minimum and maximum sample sizes are
+100 and 300, respectively, and no loss to follow-up is assumed. Each
+participant is followed until death or 12 months, whichever comes first.
+After an expected-success stop or enrollment of 300 participants, the primary
+analysis is conducted once all enrolled participants' required event or
+censoring outcomes are available. Its calendar time therefore depends on the
+last observed event or censoring time.
 
 From this information, we have:
 
--   Equal randomization: `block = 2` and `rand_ratio = c(1, 1)` (default parameters)
--   Primary endpoint is at 12-months: `end_of_study = 12`
+-   Equal randomization: `block = 2` and `rand_ratio = c(control = 1, treatment = 1)` (default parameters)
+-   Primary endpoint is at 12 months: `end_of_study = 12`
 -   12-month event rate for control arm: `hazard_control = prop_to_haz(1 - 0.30, endtime = 12)` (note that the input argument is the failure proportion, not the survival proportion)
 -   No change points in hazard: `cutpoints = NULL` (default parameter)
 -   Maximum sample size: `N_total = 300`
 -   No attrition: `prop_loss = 0`
 
-Sample size selection analyses are planned starting when 100 patients are enrolled and after every additional 25 patients are enrolled. Early stopping for futility is allowed starting with the 100 patient sample size selection analysis and $F_n$ is 10%. Stopping accrual early for predicted success is only allowed starting with the 200 patient sample size selection analysis and $S_n$ is 90%. It is expected that an average of 5 patients per month will be enrolled, with no change in speed for the duration of the trial.
+Named arms make unequal allocation unambiguous. For example,
+`rand_ratio = c(control = 1, treatment = 2)` specifies 1:2 randomization.
+Unnamed values are interpreted in control-treatment order for backward
+compatibility, but explicit arm names are recommended in a protocol simulation.
+
+Sample-size selection analyses are planned after 100 participants have enrolled
+and after each additional 25 participants. Futility stopping is allowed from
+the first analysis, with $F_n=0.10$. Stopping accrual for expected success is
+allowed from 125 participants onward, with $S_n=0.90$. The assumed enrollment
+rate is constant at five participants per month.
 
 Enrollment is stochastic even though the rate is constant. The package fixes
 the first patient at calendar time zero and generates each later inter-arrival
 gap from an exponential distribution with rate 5 per month. Consequently, the
 expected time from the first to the 300th enrollment is $(300 - 1) / 5 = 59.8$
 months, but the realized completion time differs between simulated trials.
-`lambda_time = NULL` indicates that there are no internal enrollment-rate
+`lambda_time = NULL` indicates that there are no enrollment-rate
 changes; zero is implicit and must not be supplied.
 
 For comparison, a ramp-up specification such as `lambda = c(2, 5)` and
-`lambda_time = 6` means 2 expected enrollments per month over $[0,6)$ and 5 per
-month from month 6 onward. Fractional changes such as `lambda_time = 6.5` are
-also simulated exactly. Enrollment-rate knots use the trial calendar measured
-from first patient in, whereas hazard `cutpoints` use each subject's follow-up
-time measured from that subject's enrollment. The two schedules are independent
-and need not share their knots.
+`lambda_time = 6` assigns positive realized enrollment times in $(0,6]$ to 2
+expected enrollments per month and later times to 5 per month. The first participant
+at zero is the fixed calendar origin. Fractional changes such as
+`lambda_time = 6.5` are also simulated exactly. Enrollment-rate knots use the
+trial calendar measured from first participant in, whereas hazard `cutpoints` use
+each participant's follow-up time measured from that participant's enrollment. The two
+schedules are independent and need not share their knots.
 
 From this information, we have:
 
 -   Interim sample size looks: `interim_look = seq(100, 275, 25)`
 -   Futility probability thresholds: `Fn = rep(0.10, 8)`
 -   Predicted success probability thresholds: `Sn = c(1, rep(0.9, 7))`
+-   Immediate success is disabled: `Qn = 1` (the default)
 -   `lambda = 5` and `lambda_time = NULL` (default parameter)
 
 Note that the first value of `Sn` is 1. This is because the trial is not allowed to stop for predicted success at the first interim analysis of $n = 100$. The remaining elements of `Sn` are 0.9, corresponding to 90%.
+
+## Final analysis and hypotheses
 
 The primary analysis is a two-sided log-rank test, with success declared at the $\alpha = 0.05$ level.
 
@@ -62,11 +94,19 @@ From this information, we have:
 -   Two-sided log-rank test used: `alternative = "two.sided"` and `method = "logrank"`
 -   $\alpha = 0.05$ level used to declare success: `prob_ha = 0.95`
 
-Note that `prob_ha` is set as $1 - 0.05$. This allows us to interchange between tests, including Bayesian tests (`method = "bayes-surv"`), which requires an analogous posterior probability threshold. The parameter `h0` is ignored when using a log-rank test, as it is not meaningful to have success margins.
+For a frequentist analysis, `goldilocks` expresses evidence as $1-p$, so
+`prob_ha = 0.95` corresponds to a two-sided significance level of 0.05. A
+Bayesian analysis instead compares a posterior probability with `prob_ha`;
+the common numerical scale does not make the frequentist and Bayesian decision
+rules inferentially equivalent. The log-rank analysis requires `h0 = 0`,
+corresponding to equality of the survival distributions.
 
 ### One-sided tests
 
-The example above uses a two-sided test. When the trial is designed to detect a benefit in one direction only -- here, longer survival on the treatment arm -- a one-sided test is often more appropriate. The `cox` and `logrank` methods support all three alternatives via the `alternative` argument. For these methods the direction is defined on the hazard scale:
+The example above uses a two-sided test. A design targeting benefit in one
+direction can instead prespecify a one-sided test. The `cox` and `logrank`
+methods support all three alternatives via the `alternative` argument. For
+these methods, the direction of benefit is:
 
 -   `alternative = "less"` declares success when the treatment arm has a *lower* hazard (longer survival) than control.
 -   `alternative = "greater"` declares success when the treatment arm has a *higher* hazard.
@@ -81,22 +121,49 @@ out_power_1sided <- update(
 )
 ```
 
-The frequentist binary risk-difference analysis (`method = "riskdiff"`) supports all three alternatives and compares $p_\textrm{treatment} - p_\textrm{control}$ with `h0` using a Wald test. The Bayesian test (`method = "bayes-surv"`) requires a one-sided alternative (`"less"` or `"greater"`), and `"two.sided"` raises an error. For the Bayesian test the effect is measured on the cumulative-failure-probability scale, $p_\textrm{treatment} - p_\textrm{control}$ at `end_of_study`, compared against the margin `h0` (default `0`):
+The frequentist binary risk-difference analyses support all three alternatives and compare $p_{\text{treatment}} - p_{\text{control}}$ with `h0`. Use `method = "riskdiff-fm"` for a Farrington-Manning score test that remains defined for sparse boundary tables, or `method = "riskdiff-wald"` for the plug-in Wald test. The Bayesian test (`method = "bayes-surv"`) requires a one-sided alternative (`"less"` or `"greater"`), and `"two.sided"` raises an error. For the Bayesian test the effect is measured on the cumulative-failure-probability scale, $p_{\text{treatment}} - p_{\text{control}}$ at `end_of_study`, compared against the margin `h0` (default `0`):
 
--   `alternative = "less"` declares success when the posterior probability that $p_\textrm{treatment} - p_\textrm{control} < h_0$ exceeds the threshold `prob_ha` -- i.e. the treatment arm has a failure probability lower than the `h0` margin relative to control. With the default `h0 = 0`, this means lower failure probability (longer survival) than control.
--   `alternative = "greater"` declares success when the posterior probability that $p_\textrm{treatment} - p_\textrm{control} > h_0$ exceeds `prob_ha`.
+-   `alternative = "less"` declares success when the posterior probability that $p_{\text{treatment}} - p_{\text{control}} < h_0$ exceeds the threshold `prob_ha` -- i.e. the treatment arm has a failure probability lower than the `h0` margin relative to control. With the default `h0 = 0`, this means lower failure probability (longer survival) than control.
+-   `alternative = "greater"` declares success when the posterior probability that $p_{\text{treatment}} - p_{\text{control}} > h_0$ exceeds `prob_ha`.
 
-In all methods, `alternative = "less"` therefore corresponds to a beneficial treatment effect (longer survival) in this example.
+For `method = "rmst"`, the effect is instead treatment-minus-control restricted
+mean survival time through a fixed `rmst_tau`. Longer survival corresponds to
+`alternative = "greater"`. With time measured in months, `h0` is a difference
+in months: use `h0 = 0` for superiority, or `h0 = -1` for non-inferiority
+allowing a loss of one month of RMST. Choose the method, effect scale, direction,
+and horizon together before evaluating the design. The
+[RMST vignette](rmst.html) gives a worked example with a delayed treatment
+effect and explains the support required through `rmst_tau`.
+
+## Simulation settings
 
 The operating characteristics will be determined using 500 simulated trials. At each interim analysis, we will use 100 imputations and assume independent weakly-informative $\operatorname{Gamma}(0.1, 0.1)$ prior distributions for the treatment and control arm event time hazard rate parameters. As this is computationally expensive overall, we will exploit the option to parallelize the simulations over multiple cores.
 
 -   Number of simulated trials: `N_trials = 500`
 -   Number of imputations from predictive distribution: `N_impute = 100`
 -   Independent prior distribution for each hazard rate parameter: `prior_surv = c(0.1, 0.1)`
--   Parallel computation: `ncores = 8`. The default `backend = "auto"` uses forked workers on Unix-like platforms and PSOCK workers on Windows.
--   Reproducible simulation streams: `seed = 123`
+-   Parallel computation using eight cores: `ncores = 8`
+-   Reproducible Monte Carlo study: `seed = 123`
 
-Similar to above, the parameter `N_mcmc` is not required when using a log-rank test, meaning we do not need to enter a value for this argument. Since we do not allow for attrition, the data at the final analysis will be complete, and we can set `imputed_final = FALSE`. If attrition occurred and `method = "cox"` or `method = "riskdiff"` were selected, `imputed_final = TRUE` would analyze each completed dataset and pool the scalar estimates and variances using Rubin's rules; at least two imputations are required. Imputed final analyses are not available for `method = "logrank"`.
+The parameter `N_mcmc` is not used by the log-rank test. Here `prop_loss = 0`
+means no dropout. A positive value would specify the CDF of an independent
+exponential dropout time at `end_of_study`; actual censoring by dropout can be
+less frequent because events can occur first. Log-rank, Cox, and RMST analyses retain
+right-censored follow-up with `imputed_final = FALSE`, including when dropout
+occurs. Imputed final analyses are not available for `method = "logrank"`.
+
+For methods accepting `imputed_final = TRUE`, complete final outcomes use the
+selected test directly. With missing outcomes, `"cox"`, `"rmst"`, and `"riskdiff-wald"`
+support final imputation and Rubin pooling, requiring at least two imputations
+and positive total variance. FM final imputation is unsupported; simulations
+with `method = "riskdiff-fm"` and `imputed_final = TRUE` require zero dropout
+in both arms. Binary
+analyses with `imputed_final = FALSE` exclude incomplete endpoint statuses;
+that complete-case analysis can be biased even under independent dropout,
+because early events can be observed before dropout. Binary designs with
+dropout should assess final imputation and its model assumptions.
+
+## Power and type I error
 
 Initially, we want to determine the power to detect a significant treatment effect when the OS rate at 12-months for the treatment arm is 50%.
 
@@ -119,7 +186,7 @@ out_power <- sim_trials(
   end_of_study = 12,
   prior_surv = c(0.1, 0.1),
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0,
   alternative = "two.sided",
   Fn = rep(0.10, 8),
@@ -132,25 +199,55 @@ out_power <- sim_trials(
   seed = 123)
 ```
 
-On an Apple M2 Pro with 10 CPU cores, this workload took about 18 seconds with `ncores = 8` in a local run. Runtime will vary with hardware, the number of workers, and system load.
+The 500 replicates used here are sufficient for illustration but not for a
+definitive design decision. A larger simulation should be used when greater
+precision is needed for type I error, power, or expected sample size.
 
-It is straightforward to calculate the type I error under this design. The only change required is to set the `hazard_treatment` argument to the same as the `hazard_control` argument (i.e. the null case). We can make use of the `update()` function to avoid having to type everything else over again.
+To estimate type I error, we simulate under the null by setting the treatment
+hazard equal to the control hazard. `update()` retains the remaining design
+specification:
 
 ```{r example_type1, eval=FALSE}
 out_t1error <- update(out_power, hazard_treatment = hc, seed = 124)
 ```
 
 ```{r summarise_sims}
+initial_oc <- summarise_sims(list(out_power, out_t1error))
 knitr::kable(
-  summarise_sims(list(out_power$sims, out_t1error$sims)),
+  initial_oc[c(
+    "scenario",
+    "n_requested",
+    "n_used",
+    "n_failed",
+    "power",
+    "stop_success",
+    "stop_futility",
+    "stop_max_N",
+    "mean_N"
+  )],
   digits = 3,
+  col.names = c(
+    "Scenario", "Requested", "Used", "Failed runs", "Power",
+    "Expected success stop", "Futility stop", "Maximum N", "Mean N"
+  ),
   caption = "Operating characteristics with a two-sided log-rank test at the 0.05 level. Scenario 1 is the alternative (treatment OS 50%); scenario 2 is the null (treatment OS 30%)."
 )
 ```
 
-The type I error under this design (scenario 2, `power` column) is slightly too large to be considered acceptable. This was to be expected, since we kept the $P$-value threshold as 0.05 despite having multiple interim looks. However, we simulated only `N_trials = 500` trials, meaning that, if the type I error were truly 0.05, values in the interval (`0.05 + c(-1, 1) * 1.96 * sqrt(0.05 * (1 - 0.05) / 500)`) would be consistent with this.
+The estimated type I error under this design is the `power` value for scenario
+2: `r sprintf("%.1f%%", 100 * initial_oc$power[2])`. Its 95% Wilson Monte Carlo
+interval is `r sprintf("%.1f%% to %.1f%%", 100 * initial_oc$power_mc_lower[2], 100 * initial_oc$power_mc_upper[2])`.
+The point estimate alone does not establish whether the design exceeds the
+intended 0.05 level; both Monte Carlo uncertainty and the complete adaptive
+decision rule matter.
 
-In practice, we need to use a more stringent threshold in order to control the overall type I error. This can be achieved by trial and error. For example, if we use $P < 0.04$ (applied using the argument `prob_ha = 0.96`), we find the operating characteristics are more acceptable.
+## Calibrating the final threshold
+
+The final-analysis threshold should therefore be calibrated jointly with the
+interim rules. As a preliminary candidate, consider $P < 0.04$, specified as
+`prob_ha = 0.96`. The [calibration vignette](calibrating-prob-ha.html) gives a
+systematic grid-search and independent-validation procedure. The candidate
+below illustrates a stricter threshold; it is not a validated calibration.
 
 ```{r example_p0.04, eval=FALSE}
 out_power2 <- update(out_power, prob_ha = 0.96, return_trace = TRUE)
@@ -164,26 +261,210 @@ out_t1error2 <- update(
 
 ```{r summarise_sims_p0.04}
 oc_calibrated <- summarise_sims(list(
-  "target: treatment OS 50%" = out_power2$sims,
-  "null: treatment OS 30%" = out_t1error2$sims
-))
+  "target: treatment OS 50%" = out_power2,
+  "null: treatment OS 30%" = out_t1error2
+), max_mcse = c(power = 0.02, mean_N = 3))
+
+target_oc <- oc_calibrated[
+  oc_calibrated$scenario == "target: treatment OS 50%",
+]
+null_oc <- oc_calibrated[
+  oc_calibrated$scenario == "null: treatment OS 30%",
+]
+
+format_mc_interval <- function(estimate, lower, upper, digits = 3) {
+  format_string <- paste0(
+    "%.", digits, "f [%.", digits, "f-%.", digits, "f]"
+  )
+  sprintf(format_string, estimate, lower, upper)
+}
+oc_calibrated_display <- data.frame(
+  scenario = oc_calibrated$scenario,
+  simulations = sprintf(
+    "%d/%d (%d)",
+    oc_calibrated$n_used,
+    oc_calibrated$n_requested,
+    oc_calibrated$n_failed
+  ),
+  power = format_mc_interval(
+    oc_calibrated$power,
+    oc_calibrated$power_mc_lower,
+    oc_calibrated$power_mc_upper
+  ),
+  expected_success = format_mc_interval(
+    oc_calibrated$stop_success,
+    oc_calibrated$stop_success_mc_lower,
+    oc_calibrated$stop_success_mc_upper
+  ),
+  futility = format_mc_interval(
+    oc_calibrated$stop_futility,
+    oc_calibrated$stop_futility_mc_lower,
+    oc_calibrated$stop_futility_mc_upper
+  ),
+  maximum_N = format_mc_interval(
+    oc_calibrated$stop_max_N,
+    oc_calibrated$stop_max_N_mc_lower,
+    oc_calibrated$stop_max_N_mc_upper
+  ),
+  mean_N = format_mc_interval(
+    oc_calibrated$mean_N,
+    oc_calibrated$mean_N_mc_lower,
+    oc_calibrated$mean_N_mc_upper,
+    digits = 1
+  )
+)
 knitr::kable(
-  oc_calibrated,
-  digits = 3,
+  oc_calibrated_display,
+  col.names = c(
+    "Scenario",
+    "Used/requested (failed)",
+    "Power [95% MC CI]",
+    "Expected success [95% MC CI]",
+    "Futility [95% MC CI]",
+    "Maximum N [95% MC CI]",
+    "Mean N [95% MC CI]"
+  ),
   caption = "Operating characteristics with the more stringent P < 0.04 threshold (`prob_ha = 0.96`)."
 )
 ```
 
-In the cached 500-trial simulation, assuming the treatment arm has an OS rate of 50% at 12 months, 86.6% of trials stopped early for expected success, 4.6% stopped early for futility, and the mean sample size was 175.7. Overall power was 91.4%. When the treatment-arm OS rate equalled the control-arm rate, 88.8% of trials stopped early for futility. These Monte Carlo estimates have simulation error; larger calibration runs are appropriate for final design decisions.
+Here, "95% MC CI" means a Monte Carlo confidence interval: it describes how
+precisely this finite batch estimates the operating characteristic under the
+fixed simulation assumptions. It is **not a clinical confidence interval for
+the treatment effect** and does not represent uncertainty in the assumed event,
+accrual, or loss-to-follow-up models. Probability intervals use the Wilson
+method, while mean sample size uses a t interval based on its Monte Carlo
+standard error. The optional `max_mcse` argument warns when a named precision
+target is not met; it does not change the simulations or estimates.
+
+In this illustrative `r target_oc$n_used`-trial simulation, assuming a
+50% 12-month OS probability in the treatment arm,
+`r sprintf("%.1f%%", 100 * target_oc$stop_success)` of trials stopped
+accrual for expected success,
+`r sprintf("%.1f%%", 100 * target_oc$stop_futility)` stopped for futility,
+and the mean sample size was `r sprintf("%.1f", target_oc$mean_N)`.
+Estimated power was `r sprintf("%.1f%%", 100 * target_oc$power)`.
+Under the null scenario, in which treatment and control had the same 12-month
+OS probability, `r sprintf("%.1f%%", 100 * null_oc$stop_futility)`
+stopped for futility. Larger simulation
+studies are appropriate when the displayed Monte Carlo precision is
+insufficient for a final design decision.
+
+## Calendar time and follow-up
+
+The same simulation can be summarized on the calendar-time scale without
+adding any design arguments. Time zero is first patient enrolled, and the time
+unit is months in this example. "Analysis ready" is when the last observed
+event or censoring required for the final analysis becomes available; it does
+not include an external allowance for data cleaning or database lock. The
+percentage in the trials column uses all requested simulations as its
+denominator, so failed and excluded simulations cannot silently disappear.
+
+```{r calendar-duration}
+calendar_oc <- summarise_calendar_time(out_power2)
+calendar_duration <- calendar_oc$trial_duration
+calendar_duration$trials <- sprintf(
+  "%d (%.1f%%)",
+  calendar_duration$n_trials,
+  calendar_duration$percent_trials
+)
+calendar_duration$accrual <- sprintf(
+  "%.1f [%.1f-%.1f]",
+  calendar_duration$accrual_stop_median,
+  calendar_duration$accrual_stop_p10,
+  calendar_duration$accrual_stop_p90
+)
+calendar_duration$analysis_ready <- sprintf(
+  "%.1f [%.1f-%.1f]",
+  calendar_duration$analysis_ready_median,
+  calendar_duration$analysis_ready_p10,
+  calendar_duration$analysis_ready_p90
+)
+knitr::kable(
+  calendar_duration[c(
+    "stopping_reason",
+    "trials",
+    "mean_N",
+    "accrual",
+    "analysis_ready",
+    "followup_person_time_mean",
+    "peak_active_followup_mean"
+  )],
+  digits = 1,
+  col.names = c(
+    "Stopping reason",
+    "Trials, n (%)",
+    "Mean enrolled",
+    "Accrual stopped, median [P10-P90]",
+    "Analysis ready, median [P10-P90]",
+    "Mean person-months",
+    "Mean peak under follow-up"
+  ),
+  caption = "Calendar-time duration and follow-up burden under the treatment-effect scenario."
+)
+```
+
+Because `out_power2` was simulated with `return_trace = TRUE`, a second wide
+table describes when each interim look was reached and how many subjects were
+actively under follow-up at that time. A trial that stops before a later look
+remains in the requested denominator but does not contribute a timing value at
+that look.
+
+```{r calendar-interims}
+calendar_interim <- calendar_oc$interim_timing
+calendar_interim$reached <- sprintf(
+  "%d (%.1f%%)",
+  calendar_interim$n_reached,
+  calendar_interim$percent_reached
+)
+calendar_interim$calendar_time <- sprintf(
+  "%.1f [%.1f-%.1f]",
+  calendar_interim$calendar_time_median,
+  calendar_interim$calendar_time_p10,
+  calendar_interim$calendar_time_p90
+)
+calendar_interim$active_followup <- sprintf(
+  "%.0f [%.0f-%.0f]",
+  calendar_interim$active_followup_median,
+  calendar_interim$active_followup_p10,
+  calendar_interim$active_followup_p90
+)
+knitr::kable(
+  calendar_interim[c(
+    "look",
+    "planned_N",
+    "reached",
+    "calendar_time",
+    "active_followup"
+  )],
+  col.names = c(
+    "Look",
+    "Planned N",
+    "Reached, n (%)",
+    "Calendar month, median [P10-P90]",
+    "Active follow-up, median [P10-P90]"
+  ),
+  caption = "Calendar timing and concurrent follow-up at each interim look."
+)
+```
+
+## Graphical assessment
 
 The same results can be viewed graphically. `plot_sim_ocs()` compares final
 success, stopping behavior, and expected sample size across the treatment-effect
 scenarios. Because the meaning and direction of an effect depends on the chosen
 analysis, the effect scale is supplied explicitly; here it is the true 12-month
-treatment survival probability.
+treatment survival probability. Match values by scenario name so that they
+remain aligned when `summarise_sims()` sorts the rows.
 
 ```{r plot-ocs, fig.width=9, fig.height=4.5}
-oc_calibrated$true_treatment_survival <- c(0.50, 0.30)
+effect_by_scenario <- c(
+  "target: treatment OS 50%" = 0.50,
+  "null: treatment OS 30%" = 0.30
+)
+oc_calibrated$true_treatment_survival <- unname(
+  effect_by_scenario[oc_calibrated$scenario]
+)
 plot_sim_ocs(
   oc_calibrated,
   effect = "true_treatment_survival",

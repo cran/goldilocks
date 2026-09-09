@@ -42,12 +42,52 @@ test_that("survival_adapt keeps its default data-frame return value", {
   expect_false(inherits(out, "goldilocks_trial"))
 })
 
+test_that("survival_adapt retains complete evaluated arguments", {
+  supplied <- trace_args()
+
+  set.seed(5701)
+  compact <- do.call(survival_adapt, supplied)
+  compact_arguments <- attr(compact, "arguments", exact = TRUE)
+
+  expect_named(compact_arguments, names(formals(survival_adapt)))
+  expect_identical(
+    compact_arguments$hazard_treatment,
+    supplied$hazard_treatment
+  )
+  expect_identical(compact_arguments$empty_interval, "prior")
+  expect_identical(compact_arguments$binary_imputation, "event-time")
+  expect_identical(compact_arguments$return_trace, FALSE)
+  expect_identical(compact_arguments$generation_cutpoints, supplied$cutpoints)
+  expect_identical(
+    compact_arguments$rand_ratio,
+    c(control = 1, treatment = 1)
+  )
+  expect_identical(
+    compact_arguments$prop_loss,
+    c(control = 0.05, treatment = 0.05)
+  )
+  expect_identical(
+    unserialize(serialize(compact_arguments, NULL)),
+    compact_arguments
+  )
+
+  set.seed(5701)
+  replayed <- do.call(survival_adapt, compact_arguments)
+  expect_identical(replayed, compact)
+
+  traced <- run_traced_trial()
+  traced_arguments <- attr(traced, "arguments", exact = TRUE)
+  expect_named(traced_arguments, names(formals(survival_adapt)))
+  expect_identical(traced_arguments$return_trace, TRUE)
+})
+
 test_that("survival_adapt returns an auditable interim trace on request", {
   out <- run_traced_trial()
   expected_columns <- c(
     "look",
     "planned_N",
     "calendar_time",
+    "active_followup",
     "N_enrolled",
     "N_treatment",
     "N_control",
@@ -56,10 +96,27 @@ test_that("survival_adapt returns an auditable interim trace on request", {
     "N_pending",
     "N_not_enrolled",
     "ppp_stop_now",
+    "ppp_stop_now_mcse",
+    "ppp_stop_now_lower",
+    "ppp_stop_now_upper",
+    "ppp_stop_now_draws",
     "success_threshold",
+    "immediate_success_threshold",
+    "immediate_success_crossed",
+    "expected_success_crossed",
     "ppp_success_at_max",
+    "ppp_success_at_max_mcse",
+    "ppp_success_at_max_lower",
+    "ppp_success_at_max_upper",
+    "ppp_success_at_max_draws",
     "futility_threshold",
+    "futility_crossed",
+    "inner_mc_uncertain_stop_now",
+    "inner_mc_uncertain_success_at_max",
     "decision",
+    "decision_reason",
+    "empty_interval_fallback_count",
+    "empty_interval_fallbacks",
     "warning_count",
     "warning_messages"
   )
@@ -74,6 +131,7 @@ test_that("survival_adapt returns an auditable interim trace on request", {
     out$trace$decision %in%
       c(
         "continue",
+        "stop_immediate_success",
         "stop_expected_success",
         "stop_futility"
       )
@@ -82,13 +140,105 @@ test_that("survival_adapt returns an auditable interim trace on request", {
     out$trace$N_treatment + out$trace$N_control,
     out$trace$N_enrolled
   )
+  expect_true(all(out$trace$active_followup >= 0))
+  expect_true(all(out$trace$active_followup <= out$trace$N_enrolled))
+  expect_named(
+    out$summary,
+    c(
+      "prob_threshold",
+      "margin",
+      "alternative",
+      "N_treatment",
+      "N_control",
+      "N_enrolled",
+      "N_max",
+      "post_prob_ha",
+      "est_final",
+      "ppp_success",
+      "stop_futility",
+      "stop_immediate_success",
+      "stop_expected_success",
+      "trial_success",
+      "stopping_reason",
+      "decision_time",
+      "accrual_stop_time",
+      "analysis_ready_time",
+      "planned_completion_time",
+      "followup_person_time",
+      "peak_active_followup"
+    )
+  )
+  expect_gte(out$summary$analysis_ready_time, out$summary$accrual_stop_time)
+  expect_lte(
+    out$summary$analysis_ready_time,
+    out$summary$planned_completion_time
+  )
+  expect_lte(out$summary$peak_active_followup, out$summary$N_enrolled)
+  expect_equal(
+    out$trace$ppp_stop_now_draws,
+    rep(trace_args()$N_impute, nrow(out$trace))
+  )
+  expect_true(all(out$trace$ppp_stop_now_mcse >= 0))
+  expect_true(all(
+    out$trace$ppp_stop_now_lower <= out$trace$ppp_stop_now &
+      out$trace$ppp_stop_now <= out$trace$ppp_stop_now_upper
+  ))
+  expect_true(all(nzchar(out$trace$decision_reason)))
+  immediate_rows <- out$trace$decision == "stop_immediate_success"
+  if (any(immediate_rows)) {
+    expect_true(all(
+      out$trace$ppp_stop_now[immediate_rows] >
+        out$trace$immediate_success_threshold[immediate_rows]
+    ))
+    expect_true(all(
+      out$trace$decision_reason[immediate_rows] ==
+        "immediate_success_estimate_above_threshold"
+    ))
+  }
+  success_rows <- out$trace$decision == "stop_expected_success"
+  if (any(success_rows)) {
+    expect_true(all(
+      out$trace$ppp_stop_now[success_rows] >
+        out$trace$success_threshold[success_rows]
+    ))
+    expect_true(all(
+      out$trace$decision_reason[success_rows] ==
+        "expected_success_estimate_above_threshold"
+    ))
+  }
+  futility_rows <- out$trace$decision == "stop_futility"
+  if (any(futility_rows)) {
+    expect_true(all(
+      out$trace$ppp_success_at_max[futility_rows] <
+        out$trace$futility_threshold[futility_rows]
+    ))
+    expect_true(all(
+      out$trace$decision_reason[futility_rows] ==
+        "futility_estimate_below_threshold"
+    ))
+  }
 
   last_decision <- out$trace$decision[nrow(out$trace)]
-  if (out$summary$stop_expected_success == 1) {
+  if (out$summary$stop_immediate_success == 1) {
+    expect_identical(last_decision, "stop_immediate_success")
+  } else if (out$summary$stop_expected_success == 1) {
     expect_identical(last_decision, "stop_expected_success")
   } else if (out$summary$stop_futility == 1) {
     expect_identical(last_decision, "stop_futility")
   }
+})
+
+test_that("decision metadata contains normalized thresholds", {
+  out <- run_traced_trial(Sn = 0.9, Fn = 0.05)
+  design <- attr(out, "decision_design", exact = TRUE)
+
+  expect_equal(design$interim_look, c(40, 60))
+  expect_equal(design$Sn, c(0.9, 0.9))
+  expect_equal(design$Qn, c(1, 1))
+  expect_equal(design$Fn, c(0.05, 0.05))
+  expect_equal(design$N_impute, trace_args()$N_impute)
+  expect_equal(design$N_mcmc, trace_args()$N_mcmc)
+  expect_equal(design$mc_conf_level, 0.95)
 })
 
 test_that("traced trials are reproducible with a fixed seed", {
@@ -121,6 +271,30 @@ test_that("trace captures warnings emitted during interim analysis", {
     paste(out$trace$warning_messages, collapse = " "),
     "zero subjects"
   )
+  expect_true(any(out$trace$empty_interval_fallback_count > 0))
+  expect_match(
+    paste(out$trace$empty_interval_fallbacks, collapse = " "),
+    "propagate: treatment="
+  )
+})
+
+test_that("trace records prior-only empty-interval handling without warnings", {
+  args <- trace_args()
+  args$cutpoints <- 12
+  args$hazard_treatment <- c(-log(0.85) / 12, -log(0.85) / 12)
+  args$hazard_control <- c(-log(0.7) / 12, -log(0.7) / 12)
+  args$N_impute <- 1
+  args$N_mcmc <- 1
+
+  set.seed(5701)
+  expect_no_warning(
+    out <- do.call(survival_adapt, c(args, list(return_trace = TRUE)))
+  )
+  expect_true(any(out$trace$empty_interval_fallback_count > 0))
+  expect_match(
+    paste(out$trace$empty_interval_fallbacks, collapse = " "),
+    "prior: treatment="
+  )
 })
 
 test_that("traces support no-interim designs", {
@@ -130,6 +304,7 @@ test_that("traces support no-interim designs", {
   expect_equal(nrow(out$trace), 0)
   expect_equal(summary$interim_looks_completed, 0)
   expect_identical(summary$last_decision, "no_interim_looks")
+  expect_identical(summary$trial_success, out$summary$trial_success)
 })
 
 test_that("trace summaries and plots accept trial outputs", {
@@ -144,8 +319,21 @@ test_that("trace summaries and plots accept trial outputs", {
   on.exit(grDevices::dev.off(), add = TRUE)
 
   expect_s3_class(summarise_trial_trace(out), "data.frame")
+  expect_identical(
+    summarise_trial_trace(out)$trial_success,
+    out$summary$trial_success
+  )
   expect_silent(plot_trial_trace(out))
   expect_silent(plot_sim_stopping(sim_data))
+})
+
+test_that("legacy trace summaries do not gain an unavailable success field", {
+  out <- run_traced_trial()
+  out$summary$trial_success <- NULL
+
+  summary <- summarise_trial_trace(out)
+
+  expect_false("trial_success" %in% names(summary))
 })
 
 test_that("simulation stopping plot stacks outcomes by sample size", {
@@ -187,6 +375,44 @@ test_that("simulation stopping plot stacks outcomes by sample size", {
   expect_identical(captured$text_args$cex, 0.75)
   expect_match(captured$subtitle, "^Marginal percentage")
   expect_identical(captured$subtitle_args$adj, 0)
+})
+
+test_that("simulation stopping plot distinguishes both success outcomes", {
+  sim_data <- data.frame(
+    stop_immediate_success = c(TRUE, FALSE, FALSE, FALSE),
+    stop_expected_success = c(FALSE, TRUE, FALSE, FALSE),
+    stop_futility = c(FALSE, FALSE, TRUE, FALSE),
+    N_enrolled = c(40, 40, 40, 80)
+  )
+  file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(file)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  captured <- new.env(parent = emptyenv())
+  local_mocked_bindings(
+    barplot = function(height, ...) {
+      captured$height <- height
+      seq_len(ncol(height))
+    },
+    text = function(...) NULL,
+    mtext = function(...) NULL,
+    legend = function(...) NULL,
+    .package = "graphics"
+  )
+
+  expect_silent(plot_sim_stopping(sim_data))
+  expect_identical(
+    rownames(captured$height),
+    c(
+      "Immediate success",
+      "Stop accrual for expected success",
+      "Futility",
+      "Maximum sample size"
+    )
+  )
+  expect_equal(
+    unname(captured$height),
+    matrix(c(0.25, 0.25, 0.25, 0, 0, 0, 0, 0.25), nrow = 4)
+  )
 })
 
 test_that("simulation stopping plot supports conditional percentages", {
@@ -261,7 +487,7 @@ test_that("simulation stopping plot supports cumulative percentages", {
   expect_identical(
     rownames(captured$height),
     c(
-      "Expected success",
+      "Stop accrual for expected success",
       "Futility",
       "Maximum sample size",
       "Continue to next look"
@@ -402,5 +628,31 @@ test_that("simulation stopping flowchart follows counts through every look", {
     fixed = TRUE
   )
   expect_match(dot, "Stop for futility\\nn = 1", fixed = TRUE)
-  expect_match(dot, "Stop for early success\\nn = 1", fixed = TRUE)
+  expect_match(
+    dot,
+    "Stop accrual for expected success\\nn = 1",
+    fixed = TRUE
+  )
+})
+
+test_that("simulation stopping flowchart includes immediate success", {
+  skip_if_not_installed("DiagrammeR")
+  sim_data <- data.frame(
+    stop_immediate_success = c(TRUE, FALSE, FALSE, FALSE),
+    stop_expected_success = c(FALSE, TRUE, FALSE, FALSE),
+    stop_futility = c(FALSE, FALSE, TRUE, FALSE),
+    N_enrolled = c(40, 60, 60, 100),
+    N_max = 100
+  )
+
+  flowchart <- plot_sim_stopping(sim_data, type = "flowchart")
+  dot <- flowchart$x$diagram
+
+  expect_match(dot, "Declare immediate success\\nn = 1", fixed = TRUE)
+  expect_match(
+    dot,
+    "Stop accrual for expected success\\nn = 1",
+    fixed = TRUE
+  )
+  expect_match(dot, "Reach maximum sample size\\nn = 1", fixed = TRUE)
 })

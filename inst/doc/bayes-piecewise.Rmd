@@ -10,8 +10,7 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>",
-  cache.path = "bayes-piecewise-cache/"
+  comment = "#>"
 )
 set.seed(7194)
 ```
@@ -25,18 +24,33 @@ The "Two-arm randomized trials" vignette uses `method = "logrank"` and a single 
 -   a **piecewise-exponential** hazard, in which the constant hazard rate changes at one or more cut-points; and
 -   a **Bayesian decision rule** (`method = "bayes-surv"`) using a posterior probability threshold on the cumulative-failure-probability scale.
 
-We use a small example so that the simulation can be run while reading the vignette; the live `survival_adapt()` chunk takes around 10--20 seconds and is cached on first knit.
+We first use a small example to show the analysis of one adaptive trial, then
+outline the repeated simulations needed to evaluate operating characteristics.
+
+The Bayesian rule here targets the difference in event probabilities at
+`end_of_study`. If the prespecified endpoint is instead average event-free
+time through a fixed horizon, see the [RMST vignette](rmst.html). RMST uses the
+same piecewise-exponential predictive machinery but a different completed-data
+test, effect scale, and direction of benefit (`alternative = "greater"`).
 
 ## When piecewise hazards help
 
 Survival in many settings -- post-surgical mortality, transplant outcomes, oncology with early treatment toxicity -- shows a higher hazard early and a lower steady-state hazard later. A single exponential rate cannot capture both regimes; using the average rate over-states early survival and under-states late survival. A piecewise-exponential model with a single internal cut-point is often a good compromise, fitting one hazard for the early interval and another for everything afterwards.
 
-The package handles piecewise hazards through two related arguments:
+The package handles piecewise hazards through related generation and analysis
+arguments:
 
--   `cutpoints`: the positive interior times at which the hazard changes. With $J - 1$ cutpoints there are $J$ intervals and therefore $J$ hazard rates for each treatment group. For example, `cutpoints = 6` produces two intervals, $[0, 6)$ and $[6, \infty)$. The default `cutpoints = NULL` supplies no change times and produces a single, constant hazard interval.
--   `hazard_treatment` and `hazard_control`: vectors of length $J$ giving the constant hazard for each interval.
+-   `generation_cutpoints` defines the intervals used to generate event times. `hazard_treatment` and `hazard_control` supply one constant hazard per generating interval. For example, PWEALL represents `generation_cutpoints = 6` with pieces $[0, 6)$ and $[6, \infty)$.
+-   `cutpoints` defines the intervals used for posterior estimation, predictive imputation, and final piecewise-exponential analysis. When `goldilocks` assigns a realized event time to these intervals, it follows the survival counting-process convention $(0,6]$ and $(6,\infty)$: an event recorded exactly at month 6 belongs to the first interval.
 
-The helper `prop_to_haz()` maps cumulative event probabilities at given times into the corresponding piecewise hazards.
+By default `generation_cutpoints = cutpoints`, so one vector describes both
+models as in earlier package versions. The partitions may instead differ, and
+they need not contain the same number of intervals. The different boundary
+representations at an isolated cutpoint give the same continuous event-time
+distribution because the cutpoint itself has probability zero.
+
+For design specification, `prop_to_haz()` maps cumulative event probabilities
+at selected times to the corresponding piecewise hazards.
 
 ## Setting up the design
 
@@ -53,7 +67,7 @@ The treatment is hypothesised to attenuate the early-period hazard, leaving the 
 We set the cut-point at 6 months and translate these proportions into piecewise hazards:
 
 ```{r hazards}
-cutpoints <- 6         # one internal cut at 6 months -> two intervals
+cutpoints <- 6         # one change-point at 6 months gives two intervals
 end_of_study <- 24
 
 hc <- prop_to_haz(probs = c(0.30, 0.50), cutpoints = cutpoints, endtime = end_of_study)
@@ -62,7 +76,11 @@ ht <- prop_to_haz(probs = c(0.18, 0.40), cutpoints = cutpoints, endtime = end_of
 round(rbind(control = hc, treatment = ht), 4)
 ```
 
-The first column is the hazard during $[0, 6)$ months and the second column is the hazard from 6 months onward. Both arms have a higher hazard in the early window. We can sanity-check that the implied survival probabilities at 24 months match what we specified by running the cumulative incidence computation back through `ppwe()`:
+The first column is the generating hazard during $[0, 6)$ months and the second
+is the hazard from 6 months onward. In posterior sufficient statistics, the
+same columns receive observed events from $(0,6]$ and $(6,\infty)$,
+respectively. Both arms have a higher hazard in the early window. The implied
+24-month survival probabilities can be verified with `ppwe()`:
 
 ```{r check_cif}
 ppwe(hazard       = matrix(hc, nrow = 1),
@@ -89,13 +107,33 @@ $\Pr(\Delta < h_0 \mid \text{data}) \;>\; \texttt{prob\_ha}.$
 
 Because a beneficial treatment has a *lower* failure probability, `alternative = "less"` is the appropriate choice here. (`method = "bayes-surv"` does not allow `alternative = "two.sided"` -- it raises an error.)
 
-The same posterior is also used at each interim look to compute predictive probabilities of success. Imputed completions are drawn from the posterior predictive distribution of the piecewise-exponential model for subjects still under follow-up, and the analysis is repeated on each imputed dataset. The fraction of imputations that would declare success after enrollment continues to the maximum sample size is compared with `Fn` for the futility rule. Separately, the fraction that would declare success after completing follow-up for the subjects currently enrolled is compared with `Sn` for the expected-success rule.
+At each interim look, `prior_surv` is updated with the observed events and
+exposure to generate predictive completions for outstanding outcomes. Each
+completed dataset is then analyzed using `prior_surv_final`, the prior for the
+actual final analysis. The default `prior_surv_final = prior_surv` uses the same
+prior for both roles, as in this example. A separate informative predictive
+prior may incorporate external evidence while the final analysis prior remains
+weak. This requires explicitly supplying `prior_surv_final`; omitting it also
+uses the predictive prior in the analysis. The
+fraction of imputations that would declare success after enrollment continues
+to the maximum sample size is compared with `Fn` for the futility rule.
+Separately, the fraction that would declare success after completing follow-up
+for the subjects currently enrolled is compared with `Sn` for the
+expected-success rule. The default `Qn = 1` disables the optional
+immediate-success rule in this example.
 
 We use an independent weakly informative $\operatorname{Gamma}(0.1, 0.1)$ prior on every hazard component:
 
 ```{r prior}
 prior_surv <- c(0.1, 0.1) # shape and rate for each lambda_j
 ```
+
+In this example, leaving `prior_surv_final` at its default makes it equal to
+`prior_surv`. See the
+[observed-interim example](interim-data.html#using-separate-predictive-and-analysis-priors)
+for an executable example with an informative predictive prior and a separate
+diffuse analysis prior. Both current-sample and maximum-sample predictions
+use that analysis prior to test their completed datasets.
 
 ## What a simulated trial dataset looks like
 
@@ -107,13 +145,13 @@ set.seed(7195)
 example_trial_data <- sim_comp_data(
   hazard_treatment = ht,
   hazard_control = hc,
-  cutpoints = cutpoints,
+  generation_cutpoints = cutpoints,
   N_total = 12,
   lambda = 5,
   lambda_time = NULL,
   end_of_study = end_of_study,
   block = 4,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0.05
 )
 
@@ -131,25 +169,42 @@ Each row represents one simulated subject:
 
 The `time` and `enrollment` columns therefore use the same unit but different clocks: `time` is subject-relative follow-up, whereas `enrollment` is trial-calendar time.
 
+Here `prop_loss = 0.05` means $\Pr(D\leq24)=0.05$ for an independent
+exponential dropout time with rate $-\log(0.95)/24$ per month. The observed
+time is the minimum of the event time, dropout time, and 24 months. An event
+before dropout is retained, so the observed proportion censored by dropout can
+be below 5% and can differ between arms despite a common dropout distribution.
+The number of losses varies across trials; small examples may have none.
+
 ## A single simulated trial
 
-We will run one trial under the alternative hypothesis to illustrate the mechanics. We choose `interim_look = 60` (the minimum required is `max(block) = 4`) and a constant accrual rate of 5 enrollments per month. With `lambda_time = NULL`, the first patient is placed at time zero and subsequent inter-arrival gaps are generated exactly from an exponential distribution with rate 5. Piecewise accrual is specified using positive internal knots only; for example, `lambda = c(2, 5)` and `lambda_time = 6` means 2 enrollments per month before month 6 and 5 thereafter. These calendar-time enrollment knots are distinct from the subject-follow-up hazard `cutpoints` used above.
+We simulate one trial under the alternative hypothesis to illustrate the
+statistical calculations. The interim analysis is scheduled after 60
+participants have enrolled; the minimum allowable value is the randomization
+block size, `max(block) = 4`. A constant enrollment rate of five participants
+per month is assumed. With `lambda_time = NULL`, the first participant is
+placed at time zero and subsequent inter-arrival times follow an exponential
+distribution with rate 5. For piecewise accrual, `lambda = c(2, 5)` and
+`lambda_time = 6` would specify two expected enrollments per month through
+month 6 and five per month thereafter. Enrollment-rate change-points use trial
+calendar time, whereas hazard `cutpoints` use participant follow-up time.
 
-```{r run_one_trial, cache=TRUE}
+```{r run_one_trial}
 set.seed(7194)
 
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = hc,
   cutpoints        = cutpoints,
+  generation_cutpoints = cutpoints,
   N_total          = 100,
   lambda           = 5,                # enrollments per month
-  lambda_time      = NULL,             # no internal enrollment-rate knots
+  lambda_time      = NULL,             # constant enrollment rate
   interim_look     = 60,
   end_of_study     = end_of_study,
   prior_surv       = prior_surv,
   block            = 4,
-  rand_ratio       = c(1, 1),
+  rand_ratio       = c(control = 1, treatment = 1),
   prop_loss        = 0.05,
   alternative      = "less",
   h0               = 0,
@@ -163,19 +218,31 @@ out <- survival_adapt(
 out
 ```
 
-The output reports the posterior probability of the alternative at the final (or stopped) analysis (`post_prob_ha`), the posterior mean treatment effect on the cumulative-failure scale (`est_final`), the predictive probability of success (`ppp_success`), and indicators for whether the trial stopped early for futility or expected success.
+For this trial replicate, `post_prob_ha` reports the posterior probability of the alternative at the final
+(or stopped) analysis (`post_prob_ha`), the posterior mean treatment effect on
+the cumulative-failure scale (`est_final`), the predictive probability of
+success (`ppp_success`), and indicators for immediate success, expected-success
+stopping, or futility. Immediate success is disabled in this example by the
+default `Qn = 1`.
 
 ## Notes on the piecewise model
 
 Two practical considerations are worth flagging:
 
-1.  **Empty intervals at interim looks.** Early interim looks may have no subjects with follow-up reaching the later piecewise intervals. The `empty_interval` argument controls how these intervals are handled. The default, `empty_interval = "propagate"`, preserves historical package behavior by propagating exposure time and event counts from the nearest non-empty interval *within the same treatment group*, and emits a warning when it does so. This supplies a placeholder Gamma posterior for an interval with no information; it is a fallback when an interim look has not yet generated follow-up in later intervals, not a substantive estimate of those intervals' hazards. Use `empty_interval = "prior"` to leave such intervals at zero exposure and zero events, making their posteriors prior-driven, or `empty_interval = "error"` to stop the analysis whenever an empty interval is encountered. By the final analysis, all intervals will typically be populated.
+1.  **Empty intervals at interim looks.** Early interim looks may have no subjects with follow-up reaching the later piecewise intervals. The `empty_interval` argument controls how these intervals are handled. The default, `empty_interval = "prior"`, leaves such intervals at zero exposure and zero events, making their posteriors prior-driven. The legacy `empty_interval = "propagate"` option reproduces historical behavior by copying exposure time and event counts from the nearest non-empty interval *within the same treatment group* and emitting a warning. This is a sensitivity or migration option, not observed evidence about the empty interval. Use `empty_interval = "error"` to stop the analysis whenever an empty interval is encountered. By the final analysis, all intervals will typically be populated.
 
 2.  **Number of cut-points.** Each additional cut-point adds two hazard parameters to estimate in a two-arm design (one per treatment group). With limited interim data this can make individual interval posteriors diffuse. In our experience, one or two well-motivated cut-points (e.g., tied to a clinical milestone) is usually sufficient; finer partitions tend to add variance without commensurate bias reduction.
 
 ## Sensitivity to the cut-point specification
 
-If you suspect a piecewise structure but are unsure where the cut-point should sit, a useful sensitivity check is to fix the data-generating hazards (the truth) and vary the *analysis* cut-points -- that is, what `survival_adapt()` is told to model. The simulator generates trial data from `hazard_treatment` and `hazard_control` evaluated against the supplied `cutpoints`, so to compare analysis-model choices on a common ground you would run separate `sim_trials()` simulations under the same data-generating truth, varying the analytic cut-points each time. If the operating characteristics are similar across choices, the design is robust to the cut-point specification. If they differ markedly, the cut-point becomes a design decision worth justifying in the protocol.
+If you suspect a piecewise structure but are unsure where the analysis
+cut-point should sit, fix `hazard_treatment`, `hazard_control`, and
+`generation_cutpoints` as the data-generating truth, then vary `cutpoints`
+across separate `sim_trials()` calls. The hazard vectors continue to match the
+fixed generation partition, while each analysis prior must match the candidate
+analysis partition. If the operating characteristics are similar, the design
+is robust to the analysis cut-point specification. If they differ markedly,
+the cut-point becomes a design decision worth justifying in the protocol.
 
 A simpler -- but very different -- comparison is the equivalent design that is *both* simulated and analyzed under a single constant hazard for each treatment group matched to the overall 24-month proportions:
 
@@ -194,7 +261,7 @@ out_flat <- survival_adapt(
   end_of_study     = end_of_study,
   prior_surv       = prior_surv,
   block            = 4,
-  rand_ratio       = c(1, 1),
+  rand_ratio       = c(control = 1, treatment = 1),
   prop_loss        = 0.05,
   alternative      = "less",
   h0               = 0,

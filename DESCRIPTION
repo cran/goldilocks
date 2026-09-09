@@ -1,6 +1,6 @@
 Package: goldilocks
 Title: Adaptive Trial Designs for Survival and Binary Endpoints
-Version: 0.6.0
+Version: 1.0.0
 Authors@R: c(
     person(given = "Graeme L.", family = "Hickey",
            role = c("aut", "cre"),
@@ -23,9 +23,10 @@ Authors@R: c(
 Description: Implements Goldilocks adaptive trial designs for time-to-event and
     fixed-time binary endpoints. Outcomes are generated with a piecewise
     exponential model, with conjugate Gamma priors used for predictive
-    imputation. Final analyses may use log-rank or Cox tests, Bayesian
-    piecewise-exponential inference, frequentist risk differences, or Bayesian
-    beta-binomial inference. The method closely follows Broglio and colleagues
+    imputation. Final analyses may use log-rank, Cox, or restricted mean
+    survival time tests, Bayesian piecewise-exponential inference, frequentist
+    risk differences, or Bayesian beta-binomial inference. The method closely
+    follows Broglio and colleagues (2014)
     <doi:10.1080/10543406.2014.888569> and supports simulation of design
     operating characteristics.
 License: GPL-3
@@ -36,7 +37,7 @@ URL: https://graemeleehickey.github.io/goldilocks/,
 BugReports: https://github.com/graemeleehickey/goldilocks/issues
 Depends: R (>= 4.1.0), survival
 Imports: dplyr, parallel, pbmcapply, PWEALL, Rcpp, rlang, stats
-Suggests: bench, covr, DiagrammeR, testthat (>= 3.0.0), knitr,
+Suggests: bench, survRM2, covr, DiagrammeR, testthat (>= 3.0.0), knitr,
         rmarkdown
 LinkingTo: BH, Rcpp
 Language: en-US
@@ -44,7 +45,7 @@ RoxygenNote: 7.3.3
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2026-07-29 16:25:42 UTC; hickeg3
+Packaged: 2026-09-09 11:38:15 UTC; hickeg3
 Author: Graeme L. Hickey [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-4989-0054>),
   Ying Wan [aut],
@@ -55,4 +56,4 @@ Author: Graeme L. Hickey [aut, cre] (ORCID:
   Tim Kacprowski [ctb] (For code from fastlogrank R package.)
 Maintainer: Graeme L. Hickey <graemeleehickey@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-07-29 17:00:11 UTC
+Date/Publication: 2026-09-09 14:40:02 UTC

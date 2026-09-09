@@ -1,0 +1,520 @@
+#' Evaluate one prepared interim analysis
+#'
+#' @description Calculates posterior predictive probabilities and applies the
+#'   immediate-success, expected-success, and futility rules for one interim
+#'   data cut, whether the data arose from a simulated or ongoing trial.
+#'
+#' @param data_interim A data frame containing `time`, `event`, `treatment`,
+#'   `subject_enrolled`, `subject_impute_success`, and
+#'   `subject_impute_futility`.
+#' @param look A positive integer identifying the interim look.
+#' @param planned_N A positive integer giving the planned cumulative enrollment
+#'   at the look.
+#' @param calendar_time A single finite, non-negative numeric value giving the
+#'   calendar time of the data cut.
+#' @param active_followup A non-negative integer giving the number of enrolled
+#'   subjects still under follow-up.
+#' @param check_futility A single logical value indicating whether to calculate
+#'   success at the maximum sample size.
+#' @inheritParams survival_adapt
+#'
+#' @return A list containing predictive probabilities, the decision, Monte Carlo
+#'   summaries, diagnostics, and a one-row decision trace.
+#'
+#' @keywords internal
+#' @noRd
+evaluate_interim_decision <- function(
+  data_interim,
+  look,
+  planned_N,
+  calendar_time,
+  active_followup,
+  end_of_study,
+  cutpoints,
+  single_arm,
+  prior_surv,
+  prior_bin,
+  bin_method,
+  alternative,
+  h0,
+  Fn,
+  Sn,
+  prob_ha,
+  N_impute,
+  N_mcmc,
+  mc_conf_level,
+  empty_interval,
+  method,
+  binary_imputation,
+  check_futility,
+  Qn = 1,
+  rmst_tau = end_of_study,
+  prior_surv_final = prior_surv
+) {
+  required_columns <- c(
+    "time",
+    "event",
+    "treatment",
+    "subject_enrolled",
+    "subject_impute_success",
+    "subject_impute_futility"
+  )
+  missing_columns <- setdiff(required_columns, names(data_interim))
+  if (!is.data.frame(data_interim) || length(missing_columns) > 0L) {
+    stop(
+      "'data_interim' must be a data frame containing columns: ",
+      paste(required_columns, collapse = ", ")
+    )
+  }
+
+  data <- data_interim[
+    data_interim$subject_enrolled,
+    c("time", "event", "treatment"),
+    drop = FALSE
+  ]
+
+  warning_state <- new.env(parent = emptyenv())
+  warning_state$messages <- character()
+  warning_state$empty_interval_fallbacks <- character()
+  capture_warning <- function(warning) {
+    warning_state$messages <- unique(c(
+      warning_state$messages,
+      conditionMessage(warning)
+    ))
+  }
+  capture_empty_interval <- function(condition) {
+    detail <- condition$details
+    entries <- paste0(
+      condition$policy,
+      ": treatment=",
+      detail$treatment,
+      ", interval=",
+      detail$interval
+    )
+    warning_state$empty_interval_fallbacks <- unique(c(
+      warning_state$empty_interval_fallbacks,
+      entries
+    ))
+  }
+
+  data_summ <- posterior_sufficient_stats(
+    data = data,
+    cutpoints = cutpoints,
+    single_arm = single_arm
+  )
+  post_lambda <- withCallingHandlers(
+    posterior_from_sufficient_stats(
+      data_summ = data_summ,
+      prior_surv = prior_surv,
+      N_mcmc = N_impute,
+      single_arm = single_arm,
+      empty_interval = empty_interval
+    ),
+    warning = capture_warning,
+    goldilocks_empty_interval = capture_empty_interval
+  )
+  posterior_diagnostics <- gamma_posterior_diagnostics(
+    data_summ = data_summ,
+    prior_surv = prior_surv,
+    cutpoints = cutpoints,
+    end_of_study = end_of_study,
+    single_arm = single_arm,
+    empty_interval = empty_interval
+  )
+  interval_widths <- if (method == "bayes-surv") {
+    endpoint_interval_widths(cutpoints, end_of_study)
+  } else {
+    NULL
+  }
+  predictive_binary_imputation <- if (
+    method %in% c("bayes-bin", "riskdiff-wald", "riskdiff-fm")
+  ) {
+    binary_imputation
+  } else {
+    "event-time"
+  }
+  imputations <- impute_predictive_draws(
+    data_in = data_interim,
+    hazards = post_lambda,
+    end_of_study = end_of_study,
+    cutpoints = cutpoints,
+    single_arm = single_arm,
+    binary_imputation = predictive_binary_imputation,
+    check_futility = check_futility
+  )
+
+  maximum_successes <- 0L
+  current_successes <- 0L
+  inner_mc_uncertain_now <- 0L
+  inner_mc_uncertain_max <- 0L
+  binary_count_reuse <- NULL
+  if (method %in% c("bayes-bin", "riskdiff-wald", "riskdiff-fm")) {
+    completed_counts <- predictive_binary_counts(
+      data_in = data_interim,
+      imputations = imputations,
+      single_arm = single_arm,
+      check_futility = check_futility
+    )
+    binary_result <- analyse_predictive_binary_counts(
+      completed_counts = completed_counts,
+      single_arm = single_arm,
+      N_mcmc = N_mcmc,
+      method = method,
+      alternative = alternative,
+      h0 = h0,
+      prior_bin = prior_bin,
+      bin_method = bin_method,
+      check_futility = check_futility,
+      prob_ha = prob_ha,
+      mc_conf_level = mc_conf_level
+    )
+    current_successes <- binary_result$current_successes
+    maximum_successes <- binary_result$maximum_successes
+    inner_mc_uncertain_now <- binary_result$inner_mc_uncertain_now
+    inner_mc_uncertain_max <- binary_result$inner_mc_uncertain_max
+    binary_count_reuse <- binary_result$reuse
+  } else {
+    prepared_outcomes <- prepare_predictive_outcomes(
+      data_in = data_interim,
+      imputations = imputations,
+      check_futility = check_futility
+    )
+    for (j in seq_len(N_impute)) {
+      stop_check <- withCallingHandlers(
+        analyse_predictive_survival(
+          prepared_outcomes = prepared_outcomes,
+          imputations = imputations,
+          draw = j,
+          rmst_tau = rmst_tau,
+          end_of_study = end_of_study,
+          cutpoints = cutpoints,
+          interval_widths = interval_widths,
+          single_arm = single_arm,
+          prior_surv_final = prior_surv_final,
+          N_mcmc = N_mcmc,
+          method = method,
+          alternative = alternative,
+          h0 = h0,
+          empty_interval = empty_interval,
+          check_futility = check_futility,
+          mc_conf_level = mc_conf_level,
+          prob_ha = prob_ha
+        ),
+        warning = capture_warning,
+        goldilocks_empty_interval = capture_empty_interval
+      )
+
+      analysis_now <- stop_check$classification_now
+      current_successes <- current_successes + as.integer(analysis_now$crossed)
+      inner_mc_uncertain_now <- inner_mc_uncertain_now +
+        as.integer(analysis_now$uncertain)
+
+      if (check_futility) {
+        analysis_max <- stop_check$classification_max
+        maximum_successes <- maximum_successes +
+          as.integer(analysis_max$crossed)
+        inner_mc_uncertain_max <- inner_mc_uncertain_max +
+          as.integer(analysis_max$uncertain)
+      }
+    }
+  }
+
+  ppp_now_mc <- monte_carlo_probability_summary(
+    successes = current_successes,
+    draws = N_impute,
+    threshold = Sn,
+    direction = "greater",
+    confidence = mc_conf_level
+  )
+  ppp_max_mc <- if (check_futility) {
+    monte_carlo_probability_summary(
+      successes = maximum_successes,
+      draws = N_impute,
+      threshold = Fn,
+      direction = "less",
+      confidence = mc_conf_level
+    )
+  } else {
+    NULL
+  }
+
+  decision_result <- select_interim_decision(
+    ppp_success = ppp_now_mc$estimate,
+    ppp_success_at_max = if (check_futility) {
+      ppp_max_mc$estimate
+    } else {
+      NA_real_
+    },
+    Sn = Sn,
+    Qn = Qn,
+    Fn = Fn,
+    check_futility = check_futility
+  )
+  decision <- decision_result$decision
+  decision_reason <- decision_result$decision_reason
+
+  trace <- data.frame(
+    look = as.integer(look),
+    planned_N = as.integer(planned_N),
+    calendar_time = calendar_time,
+    active_followup = as.integer(active_followup),
+    N_enrolled = nrow(data),
+    N_treatment = sum(data$treatment == 1),
+    N_control = sum(data$treatment == 0),
+    events_treatment = sum(data$event[data$treatment == 1]),
+    events_control = sum(data$event[data$treatment == 0]),
+    N_pending = sum(
+      data_interim$subject_enrolled &
+        data_interim$subject_impute_success
+    ),
+    N_not_enrolled = sum(data_interim$subject_impute_futility),
+    ppp_stop_now = ppp_now_mc$estimate,
+    ppp_stop_now_mcse = ppp_now_mc$mcse,
+    ppp_stop_now_lower = ppp_now_mc$lower,
+    ppp_stop_now_upper = ppp_now_mc$upper,
+    ppp_stop_now_draws = ppp_now_mc$draws,
+    success_threshold = Sn,
+    immediate_success_threshold = Qn,
+    immediate_success_crossed = decision_result$immediate_success_crossed,
+    expected_success_crossed = decision_result$expected_success_crossed,
+    ppp_success_at_max = if (check_futility) {
+      ppp_max_mc$estimate
+    } else {
+      NA_real_
+    },
+    ppp_success_at_max_mcse = if (check_futility) {
+      ppp_max_mc$mcse
+    } else {
+      NA_real_
+    },
+    ppp_success_at_max_lower = if (check_futility) {
+      ppp_max_mc$lower
+    } else {
+      NA_real_
+    },
+    ppp_success_at_max_upper = if (check_futility) {
+      ppp_max_mc$upper
+    } else {
+      NA_real_
+    },
+    ppp_success_at_max_draws = if (check_futility) {
+      ppp_max_mc$draws
+    } else {
+      NA_integer_
+    },
+    futility_threshold = if (check_futility) Fn else NA_real_,
+    futility_crossed = decision_result$futility_crossed,
+    inner_mc_uncertain_stop_now = inner_mc_uncertain_now,
+    inner_mc_uncertain_success_at_max = if (check_futility) {
+      inner_mc_uncertain_max
+    } else {
+      NA_integer_
+    },
+    decision = decision,
+    decision_reason = decision_reason,
+    empty_interval_fallback_count = length(
+      warning_state$empty_interval_fallbacks
+    ),
+    empty_interval_fallbacks = paste(
+      warning_state$empty_interval_fallbacks,
+      collapse = " | "
+    ),
+    warning_count = length(warning_state$messages),
+    warning_messages = paste(warning_state$messages, collapse = " | "),
+    stringsAsFactors = FALSE
+  )
+
+  monte_carlo <- data.frame(
+    estimand = c(
+      "success_if_stop_now",
+      if (check_futility) "success_at_maximum" else character()
+    ),
+    successes = c(
+      ppp_now_mc$successes,
+      if (check_futility) ppp_max_mc$successes else integer()
+    ),
+    draws = c(
+      ppp_now_mc$draws,
+      if (check_futility) ppp_max_mc$draws else integer()
+    ),
+    estimate = c(
+      ppp_now_mc$estimate,
+      if (check_futility) ppp_max_mc$estimate else numeric()
+    ),
+    mcse = c(
+      ppp_now_mc$mcse,
+      if (check_futility) ppp_max_mc$mcse else numeric()
+    ),
+    lower = c(
+      ppp_now_mc$lower,
+      if (check_futility) ppp_max_mc$lower else numeric()
+    ),
+    upper = c(
+      ppp_now_mc$upper,
+      if (check_futility) ppp_max_mc$upper else numeric()
+    ),
+    threshold = c(
+      ppp_now_mc$threshold,
+      if (check_futility) ppp_max_mc$threshold else numeric()
+    ),
+    direction = c(
+      ppp_now_mc$direction,
+      if (check_futility) ppp_max_mc$direction else character()
+    ),
+    point_crossed = c(
+      ppp_now_mc$point_crossed,
+      if (check_futility) ppp_max_mc$point_crossed else logical()
+    ),
+    bound_crossed = c(
+      ppp_now_mc$bound_crossed,
+      if (check_futility) ppp_max_mc$bound_crossed else logical()
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  list(
+    ppp_success = ppp_now_mc$estimate,
+    ppp_success_at_max = if (check_futility) {
+      ppp_max_mc$estimate
+    } else {
+      NA_real_
+    },
+    decision = decision,
+    decision_reason = decision_reason,
+    monte_carlo = monte_carlo,
+    diagnostics = list(
+      inner_mc_uncertain_stop_now = inner_mc_uncertain_now,
+      inner_mc_uncertain_success_at_max = if (check_futility) {
+        inner_mc_uncertain_max
+      } else {
+        NA_integer_
+      },
+      binary_count_reuse = binary_count_reuse,
+      empty_interval_fallbacks = warning_state$empty_interval_fallbacks,
+      warnings = warning_state$messages,
+      prior = rbind(
+        gamma_prior_diagnostics(
+          prior_surv = prior_surv,
+          cutpoints = cutpoints,
+          end_of_study = end_of_study,
+          single_arm = single_arm,
+          stage = "interim"
+        ),
+        if (method == "bayes-surv") {
+          gamma_prior_diagnostics(
+            prior_surv = prior_surv_final,
+            cutpoints = cutpoints,
+            end_of_study = end_of_study,
+            single_arm = single_arm,
+            stage = "final"
+          )
+        }
+      ),
+      posterior = posterior_diagnostics
+    ),
+    trace = trace
+  )
+}
+
+#' Select an interim decision from predictive probabilities
+#'
+#' @description Applies the prespecified hierarchy to the posterior predictive
+#'   probabilities without performing any additional simulation. Success among
+#'   currently enrolled participants is tested first against the upper
+#'   immediate-success boundary and then against the expected-success boundary;
+#'   binding futility is tested only when neither success decision applies.
+#'
+#' @param ppp_success Predictive probability of completed-data success among
+#'   currently enrolled participants.
+#' @param ppp_success_at_max Predictive probability of success at the maximum
+#'   sample size, or `NA` when futility is disabled.
+#' @param Sn Expected-success threshold.
+#' @param Qn Immediate-success threshold.
+#' @param Fn Futility threshold.
+#' @param check_futility Whether the futility calculation was requested.
+#'
+#' @return A list containing the selected decision, its reason, and mutually
+#'   exclusive indicators for the three stopping regions.
+#'
+#' @keywords internal
+#' @noRd
+select_interim_decision <- function(
+  ppp_success,
+  ppp_success_at_max,
+  Sn,
+  Qn,
+  Fn,
+  check_futility
+) {
+  immediate_success_crossed <- ppp_success > Qn
+  expected_success_crossed <- ppp_success > Sn && ppp_success <= Qn
+  futility_crossed <- !immediate_success_crossed &&
+    !expected_success_crossed &&
+    isTRUE(check_futility && ppp_success_at_max < Fn)
+
+  decision <- if (immediate_success_crossed) {
+    "stop_immediate_success"
+  } else if (expected_success_crossed) {
+    "stop_expected_success"
+  } else if (futility_crossed) {
+    "stop_futility"
+  } else {
+    "continue"
+  }
+  decision_reason <- switch(
+    decision,
+    stop_immediate_success = "immediate_success_estimate_above_threshold",
+    stop_expected_success = "expected_success_estimate_above_threshold",
+    stop_futility = "futility_estimate_below_threshold",
+    continue = "continue_thresholds_not_crossed"
+  )
+
+  list(
+    decision = decision,
+    decision_reason = decision_reason,
+    immediate_success_crossed = immediate_success_crossed,
+    expected_success_crossed = expected_success_crossed,
+    futility_crossed = futility_crossed
+  )
+}
+
+#' Bind interim posterior diagnostic rows
+#'
+#' @param rows A list containing one posterior diagnostic data frame per look.
+#'
+#' @return A stable data frame with one row per look, arm, and interval.
+#'
+#' @keywords internal
+#' @noRd
+new_interim_posterior_diagnostics <- function(rows) {
+  rows <- Filter(Negate(is.null), rows)
+  if (length(rows) > 0L) {
+    out <- do.call(rbind, rows)
+    rownames(out) <- NULL
+    return(out)
+  }
+
+  data.frame(
+    look = integer(),
+    planned_N = integer(),
+    calendar_time = numeric(),
+    arm = character(),
+    interval = integer(),
+    interval_start = numeric(),
+    interval_end = numeric(),
+    exposed_subjects = integer(),
+    observed_exposure = numeric(),
+    observed_events = integer(),
+    empty_interval = logical(),
+    empty_interval_policy = character(),
+    effective_exposure = numeric(),
+    effective_events = numeric(),
+    prior_shape = numeric(),
+    prior_rate = numeric(),
+    posterior_shape = numeric(),
+    posterior_rate = numeric(),
+    posterior_mean_hazard = numeric(),
+    posterior_sd_hazard = numeric(),
+    stringsAsFactors = FALSE
+  )
+}

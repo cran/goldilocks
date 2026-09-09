@@ -1,0 +1,246 @@
+#' @title Conduct the prespecified final analysis
+#'
+#' @description Applies the selected final analysis after accrual has stopped
+#'   and the available follow-up is complete. Depending on `imputed_final`,
+#'   subjects lost to follow-up are either handled as observed censored outcomes
+#'   or have their outcomes multiply imputed.
+#'
+#' @inheritParams survival_adapt
+#' @inheritParams sim_comp_data
+#' @param data_in A data frame with one row per enrolled subject and columns for
+#'   treatment assignment (`treatment`, coded `1` for treatment and `0` for
+#'   control; single-arm designs use all 1s), event time (`time`), event
+#'   indicator (`event`), and indicator of whether the subject requires
+#'   imputation for expected success (`subject_impute_success`).
+#'
+#' @details Interim predictive calculations complete all outcomes that are not
+#'   yet observed. At the final analysis, `imputed_final = TRUE` likewise
+#'   imputes outcomes for subjects lost to follow-up before `end_of_study`. With
+#'   `imputed_final = FALSE`, time-to-event analyses retain their observed
+#'   right-censoring, whereas binary analyses (`method = "riskdiff-wald"`,
+#'   `"riskdiff-fm"`, or `"bayes-bin"`) exclude subjects without complete
+#'   endpoint status. Design evaluations should prespecify this choice and
+#'   assess sensitivity to it when appreciable loss to follow-up is expected.
+#'   Independent dropout supports right-censored survival inference but does not
+#'   imply unbiased complete-case binary inference: an early event can be
+#'   observed before dropout while a later endpoint outcome is missing.
+#'   If no final outcomes require imputation, the selected complete-data test
+#'   is used directly with either flag. Genuine final imputation is unsupported
+#'   for `method = "riskdiff-fm"` because no validated FM pooling rule is
+#'   implemented.
+#'
+#' @return A length-two numeric vector containing the posterior probability (or
+#'   `1 - P` for a frequentist analysis) for the alternative hypothesis,
+#'   followed by the treatment-effect estimate. For an imputed Cox analysis
+#'   these are the Rubin-pooled Wald-test result and pooled log hazard ratio. An
+#'   imputed RMST analysis likewise pools RMST differences and their Greenwood
+#'   variances and reports a difference in time units. For an imputed
+#'   `riskdiff-wald` analysis these are the Rubin-pooled Wald-test result and
+#'   pooled treatment-control event-risk difference. Bayesian imputed analyses
+#'   average their summaries over imputations.
+#' @noRd
+analyse_final <- function(
+  data_in,
+  cutpoints,
+  prior_surv_final,
+  N_mcmc,
+  single_arm,
+  imputed_final,
+  method,
+  N_impute,
+  alternative,
+  h0,
+  prior_bin,
+  bin_method,
+  binary_imputation,
+  empty_interval,
+  end_of_study,
+  rmst_tau = end_of_study
+) {
+  validate_analysis_configuration(
+    method,
+    alternative,
+    single_arm,
+    imputed_final
+  )
+  if (method == "rmst") {
+    validate_rmst_args(rmst_tau, end_of_study, h0)
+  }
+  has_missing_outcomes <- any(data_in$event == 0 & data_in$time < end_of_study)
+  validate_final_imputation(
+    method,
+    imputed_final,
+    has_missing_outcomes,
+    N_impute
+  )
+  # Complete final data use the selected test directly, regardless of the flag.
+  requires_imputation <- imputed_final && has_missing_outcomes
+  interval_widths <- if (requires_imputation && method == "bayes-surv") {
+    endpoint_interval_widths(cutpoints, end_of_study)
+  } else {
+    NULL
+  }
+
+  if (requires_imputation) {
+    # Posterior distribution of lambdas: final data
+    post_lambda_final <- posterior(
+      data = data_in,
+      cutpoints = cutpoints,
+      prior_surv = prior_surv_final,
+      N_mcmc = N_impute,
+      single_arm = single_arm,
+      empty_interval = empty_interval
+    )
+    # Effect estimate + posterior probability for each imputed dataset.
+    # Frequentist model-based analyses additionally retain within-imputation
+    # variances for Rubin pooling.
+    effect_final <- rep(NA_real_, N_impute)
+    post_paa <- rep(NA_real_, N_impute)
+    variance_final <- rep(NA_real_, N_impute)
+    # Impute multiple data sets
+    for (j in 1:N_impute) {
+      # Single imputed data set
+      data_success_impute <- impute_data(
+        data_in = data_in,
+        hazard = post_lambda_final[j, , , drop = FALSE],
+        end_of_study = end_of_study,
+        cutpoints = cutpoints,
+        type = "success",
+        single_arm = single_arm,
+        binary_imputation = binary_imputation
+      )
+
+      if (method == "bayes-surv") {
+        # The draw used by impute_data() came from the observed final-data
+        # posterior. Preserve the documented two-stage procedure by forming a
+        # new posterior from the completed imputation's sufficient statistics
+        # and the final-stage prior. Passing statistics directly avoids rebuilding
+        # a reduced patient-level analysis data frame for every imputation.
+        data_summ <- posterior_sufficient_stats(
+          data = data_success_impute,
+          cutpoints = cutpoints,
+          single_arm = single_arm
+        )
+        success <- analyse_prepared_bayes_surv(
+          data_summ = data_summ,
+          cutpoints = cutpoints,
+          end_of_study = end_of_study,
+          prior_surv = prior_surv_final,
+          N_mcmc = N_mcmc,
+          single_arm = single_arm,
+          alternative = alternative,
+          h0 = h0,
+          empty_interval = empty_interval,
+          interval_widths = interval_widths
+        )
+        post_paa[j] <- success$success
+        effect_final[j] <- success$effect
+        next
+      }
+
+      # The remaining methods consume subject-level outcomes or model fits.
+      # Keep their established patient-level path unchanged.
+      time <- NULL
+      event <- NULL
+      treatment <- NULL
+      data <- subset(
+        data_success_impute,
+        select = c(time, event, treatment)
+      )
+
+      if (method == "cox") {
+        fit_cox <- cox_wald_test_checked(data)
+        effect_final[j] <- fit_cox$estimate
+        variance_final[j] <- fit_cox$std_error^2
+      } else if (method == "rmst") {
+        fit_rmst <- rmst_estimate(
+          data$time,
+          data$event,
+          data$treatment,
+          rmst_tau
+        )
+        effect_final[j] <- fit_rmst$estimate
+        variance_final[j] <- fit_rmst$variance
+      } else if (method == "riskdiff-wald") {
+        fit_riskdiff <- risk_difference_estimate_checked(
+          data = data,
+          end_of_study = end_of_study
+        )
+        effect_final[j] <- fit_riskdiff$estimate
+        variance_final[j] <- fit_riskdiff$variance
+      } else {
+        # Apply primary analysis to imputed data
+        success <- analyse_data(
+          data = data,
+          cutpoints = cutpoints,
+          end_of_study = end_of_study,
+          prior_surv = prior_surv_final,
+          N_mcmc = N_mcmc,
+          single_arm = single_arm,
+          method = method,
+          alternative = alternative,
+          h0 = h0,
+          prior_bin = prior_bin,
+          bin_method = bin_method,
+          empty_interval = empty_interval
+        )
+
+        post_paa[j] <- success$success
+        if (method == "bayes-bin") {
+          effect_final[j] <- success$effect
+        }
+      }
+    }
+
+    if (method %in% c("cox", "rmst", "riskdiff-wald")) {
+      if (method == "rmst") {
+        assert_rmst_variance(
+          mean(variance_final) + (1 + 1 / N_impute) * var(effect_final)
+        )
+      }
+      pooled <- pool_rubin_scalar(
+        estimates = effect_final,
+        variances = variance_final,
+        alternative = alternative,
+        h0 = h0
+      )
+      post_paa <- pooled$success
+      est_final <- pooled$estimate
+    } else {
+      # Average Bayesian summaries over imputations
+      post_paa <- mean(post_paa)
+      est_final <- mean(effect_final)
+    }
+  } else {
+    # Apply primary analysis to final data (without imputation)
+    # Risk-difference and Bayesian binomial analyses cannot handle censored
+    # (LTFU) subjects, so exclude them.
+    if (
+      method %in%
+        c("riskdiff-wald", "riskdiff-fm", "bayes-bin") &&
+        "loss_to_fu" %in% names(data_in)
+    ) {
+      data_in <- data_in[!data_in$loss_to_fu, ]
+    }
+    success <- analyse_data(
+      data = data_in,
+      cutpoints = cutpoints,
+      end_of_study = end_of_study,
+      rmst_tau = rmst_tau,
+      prior_surv = prior_surv_final,
+      N_mcmc = N_mcmc,
+      single_arm = single_arm,
+      method = method,
+      alternative = alternative,
+      h0 = h0,
+      prior_bin = prior_bin,
+      bin_method = bin_method,
+      empty_interval = empty_interval
+    )
+
+    post_paa <- success$success
+    est_final <- success$effect
+  }
+
+  return(c(post_paa, est_final))
+}

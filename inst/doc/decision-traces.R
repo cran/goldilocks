@@ -21,12 +21,13 @@ trial <- survival_adapt(
   end_of_study = end_of_study,
   prior_surv = c(0.1, 0.1),
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0.05,
   alternative = "less",
   h0 = 0,
   Fn = c(0.05, 0.05),
   Sn = c(0.95, 0.90),
+  Qn = c(0.99, 0.99),
   prob_ha = 0.95,
   N_impute = 20,
   N_mcmc = 20,
@@ -65,12 +66,13 @@ plot_trial_trace(trial)
 #   end_of_study = end_of_study,
 #   prior_surv = c(0.1, 0.1),
 #   block = 2,
-#   rand_ratio = c(1, 1),
+#   rand_ratio = c(control = 1, treatment = 1),
 #   prop_loss = 0.05,
 #   alternative = "less",
 #   h0 = 0,
 #   Fn = c(0.05, 0.05),
 #   Sn = c(0.95, 0.90),
+#   Qn = c(0.99, 0.99),
 #   prob_ha = 0.95,
 #   N_impute = 20,
 #   N_mcmc = 20,
@@ -80,18 +82,21 @@ plot_trial_trace(trial)
 #   seed = 5702
 # )
 # 
-# summarise_sims(sims$sims)
+# summarise_sims(sims)
 # plot_sim_stopping(sims)
 # plot_sim_stopping(sims, type = "flowchart")
 # plot_sim_decisions(sims)
 
 ## ----simulation-oc-curve, eval = FALSE----------------------------------------
 # scenario_oc <- summarise_sims(list(
-#   "null" = sims_null$sims,
-#   "moderate" = sims_moderate$sims,
-#   "target" = sims$sims
+#   "null" = sims_null,
+#   "moderate" = sims_moderate,
+#   "target" = sims
 # ))
-# scenario_oc$true_event_probability_difference <- c(0, -0.05, -0.10)
+# effect_by_scenario <- c(null = 0, moderate = -0.05, target = -0.10)
+# scenario_oc$true_event_probability_difference <- unname(
+#   effect_by_scenario[scenario_oc$scenario]
+# )
 # 
 # plot_sim_ocs(
 #   scenario_oc,

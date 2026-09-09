@@ -1,8 +1,7 @@
 ## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>",
-  cache.path = "single-arm-cache/"
+  comment = "#>"
 )
 set.seed(3081)
 
@@ -18,7 +17,7 @@ target    <- 0.20                       # rate we hope the new therapy achieves
 ht <- prop_to_haz(probs = target, endtime = end_of_study)
 ht
 
-## ----run, cache=TRUE----------------------------------------------------------
+## ----run----------------------------------------------------------------------
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = NULL,              # single-arm
@@ -91,10 +90,14 @@ out
 #   seed             = 3083)
 # 
 # oc <- summarise_sims(list(
-#   "target event probability" = out_power$sims,
-#   "benchmark event probability" = out_t1error$sims
+#   "target event probability" = out_power,
+#   "benchmark event probability" = out_t1error
 # ))
-# oc$true_event_probability <- c(target, benchmark)
+# effect_by_scenario <- c(
+#   "target event probability" = target,
+#   "benchmark event probability" = benchmark
+# )
+# oc$true_event_probability <- unname(effect_by_scenario[oc$scenario])
 # 
 # oc
 # plot_sim_ocs(

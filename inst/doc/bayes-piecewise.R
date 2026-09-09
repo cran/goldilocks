@@ -1,8 +1,7 @@
 ## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>",
-  cache.path = "bayes-piecewise-cache/"
+  comment = "#>"
 )
 set.seed(7194)
 
@@ -10,7 +9,7 @@ set.seed(7194)
 library(goldilocks)
 
 ## ----hazards------------------------------------------------------------------
-cutpoints <- 6         # one internal cut at 6 months -> two intervals
+cutpoints <- 6         # one change-point at 6 months gives two intervals
 end_of_study <- 24
 
 hc <- prop_to_haz(probs = c(0.30, 0.50), cutpoints = cutpoints, endtime = end_of_study)
@@ -35,33 +34,34 @@ set.seed(7195)
 example_trial_data <- sim_comp_data(
   hazard_treatment = ht,
   hazard_control = hc,
-  cutpoints = cutpoints,
+  generation_cutpoints = cutpoints,
   N_total = 12,
   lambda = 5,
   lambda_time = NULL,
   end_of_study = end_of_study,
   block = 4,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0.05
 )
 
 knitr::kable(head(example_trial_data), digits = 2)
 
-## ----run_one_trial, cache=TRUE------------------------------------------------
+## ----run_one_trial------------------------------------------------------------
 set.seed(7194)
 
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = hc,
   cutpoints        = cutpoints,
+  generation_cutpoints = cutpoints,
   N_total          = 100,
   lambda           = 5,                # enrollments per month
-  lambda_time      = NULL,             # no internal enrollment-rate knots
+  lambda_time      = NULL,             # constant enrollment rate
   interim_look     = 60,
   end_of_study     = end_of_study,
   prior_surv       = prior_surv,
   block            = 4,
-  rand_ratio       = c(1, 1),
+  rand_ratio       = c(control = 1, treatment = 1),
   prop_loss        = 0.05,
   alternative      = "less",
   h0               = 0,
@@ -89,7 +89,7 @@ out
 #   end_of_study     = end_of_study,
 #   prior_surv       = prior_surv,
 #   block            = 4,
-#   rand_ratio       = c(1, 1),
+#   rand_ratio       = c(control = 1, treatment = 1),
 #   prop_loss        = 0.05,
 #   alternative      = "less",
 #   h0               = 0,

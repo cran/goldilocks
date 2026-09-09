@@ -359,16 +359,17 @@ design with <code>survival_adapt()</code>.</p>
 analyses with piecewise-exponential event-time modeling.
 <code>method = &quot;bayes-bin&quot;</code> supports single-arm analyses of
 complete binary outcomes. The frequentist methods (<code>logrank</code>,
-<code>cox</code>, <code>riskdiff</code>) require two arms and will raise
-an error if used in this mode.</li>
+<code>cox</code>, <code>rmst</code>, <code>riskdiff-wald</code>, and
+<code>riskdiff-fm</code>) require two arms and will raise an error if
+used in this mode.</li>
 </ul>
 <div id="the-decision-rule" class="section level2">
 <h2>The decision rule</h2>
-<p>In a single-arm trial there is no concurrent control, so the
-“treatment effect” is replaced by the cumulative event probability on
-the treatment arm itself:</p>
-<p><span class="math inline">\(\text{effect} \;=\; p_{\text{treatment}}
-\;=\; \Pr(\text{event by end\_of\_study} \mid \text{data}).\)</span></p>
+<p>In a single-arm trial there is no concurrent control, so the estimand
+is the cumulative event probability in the treatment arm. Let <span class="math inline">\(\tau\)</span> denote
+<code>end_of_study</code>:</p>
+<p><span class="math display">\[p_{\text{treatment}}
+  = \Pr(\text{event by } \tau \mid \text{data}).\]</span></p>
 <p>The argument <code>h0</code> plays the role of a benchmark on this
 scale: a target failure probability (or, equivalently, <span class="math inline">\(1 - h_0\)</span> is a target survival probability)
 drawn from external evidence such as a published rate, registry, or
@@ -383,13 +384,21 @@ therapy has a lower failure rate than the benchmark”. Choosing
 <code>alternative = &quot;greater&quot;</code> reverses the direction;
 <code>alternative = &quot;two.sided&quot;</code> is not allowed for
 <code>method = &quot;bayes-surv&quot;</code>.</p>
-<p>The same posterior is used at each interim look to compute the
-predictive probability of eventual success, which drives the futility
-(<code>Fn</code>) and expected-success (<code>Sn</code>) stopping rules.
-Predictive probabilities are obtained by imputing remaining follow-up
-from the posterior predictive distribution of the
-(piecewise-)exponential model and re-evaluating the success criterion on
-each completed dataset.</p>
+<p>At each interim look, <code>prior_surv</code> is updated with
+observed events and exposure to predict remaining follow-up. Each
+hypothetical completed dataset is then analyzed with
+<code>prior_surv_final</code>, the prior used for the actual final
+Bayesian survival analysis. The fraction that passes the posterior
+success threshold drives the futility (<code>Fn</code>) and
+expected-success (<code>Sn</code>) stopping rules. The default
+<code>Qn = 1</code> disables the optional immediate-success rule in
+these examples.</p>
+<p>The default <code>prior_surv_final = prior_surv</code> uses the same
+prior for prediction and analysis. To bring external evidence into
+prediction while using a weak analysis prior, specify both explicitly.
+<code>h0</code> remains the fixed performance goal; it is separate from
+either prior. See the <a href="interim-data.html#using-separate-predictive-and-analysis-priors">observed-interim
+example</a> for a worked specification of the two prior roles.</p>
 </div>
 <div id="setting-up-the-design" class="section level2">
 <h2>Setting up the design</h2>
@@ -404,6 +413,12 @@ to 20%. We use an interim look at 50 of 80 enrolled subjects:</p>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>ht <span class="ot">&lt;-</span> <span class="fu">prop_to_haz</span>(<span class="at">probs =</span> target, <span class="at">endtime =</span> end_of_study)</span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>ht</span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; [1] 0.009297648</span></span></code></pre></div>
+<p>We set <code>prop_loss = 0.05</code>: independently of event time,
+dropout time is exponential with rate <span class="math inline">\(-\log(0.95)/24\)</span> per month, giving a 5%
+dropout CDF at 24 months. The observed proportion censored by dropout
+can be lower because events can occur first; it is not a fixed count of
+four losses among 80 participants. Survival analyses retain the
+follow-up observed before dropout.</p>
 <p>Now we run <code>survival_adapt()</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
@@ -428,12 +443,18 @@ to 20%. We use an interim look at 50 of 80 enrolled subjects:</p>
 <span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>out</span>
 <span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
 <span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 1           0.95    0.3        less          80         0         80    80</span></span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_expected_success</span></span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1        0.992 0.1825442        0.08             0                     0</span></span></code></pre></div>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_immediate_success</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 1       0.9875 0.1910975        0.08             0                      0</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt;   stop_expected_success trial_success     stopping_reason decision_time</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; 1                     0          TRUE maximum_sample_size      39.05894</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt;   accrual_stop_time analysis_ready_time planned_completion_time</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; 1          15.05894            39.05894                39.05894</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;   followup_person_time peak_active_followup</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; 1             1702.955                   74</span></span></code></pre></div>
 <p>There is no need to supply <code>block</code> or
 <code>rand_ratio</code>: they are redundant in a single-arm design
 because no randomization is performed.</p>
-<p>A few points to highlight in the output:</p>
+<p>The principal trial-level quantities are:</p>
 <ul>
 <li><code>N_control = 0</code>: no concurrent control was
 simulated.</li>
@@ -448,11 +469,11 @@ control.</li>
 </div>
 <div id="operating-characteristics" class="section level2">
 <h2>Operating characteristics</h2>
-<p>A single trial does not tell you whether the design is
-well-calibrated. To estimate power and type I error, we run the design
-under each scenario using <code>sim_trials()</code>. The chunks below
-are not run when knitting (each takes a few minutes) but illustrate the
-workflow:</p>
+<p>A single trial replicate does not establish whether the design is
+well calibrated. Power and type I error are estimated by repeated
+simulation under alternative and null scenarios, respectively. The
+following analyses are not evaluated in the vignette because they
+require several minutes:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Power: simulate under the alternative (true rate = 0.20)</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>out_power <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">N_trials         =</span> <span class="dv">1000</span>,</span>
@@ -502,19 +523,23 @@ workflow:</p>
 <span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>  <span class="at">seed             =</span> <span class="dv">3083</span>)</span>
 <span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a></span>
 <span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a>oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
-<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>  <span class="st">&quot;target event probability&quot;</span> <span class="ot">=</span> out_power<span class="sc">$</span>sims,</span>
-<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a>  <span class="st">&quot;benchmark event probability&quot;</span> <span class="ot">=</span> out_t1error<span class="sc">$</span>sims</span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>  <span class="st">&quot;target event probability&quot;</span> <span class="ot">=</span> out_power,</span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a>  <span class="st">&quot;benchmark event probability&quot;</span> <span class="ot">=</span> out_t1error</span>
 <span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a>))</span>
-<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a>oc<span class="sc">$</span>true_event_probability <span class="ot">&lt;-</span> <span class="fu">c</span>(target, benchmark)</span>
-<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a></span>
-<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a>oc</span>
-<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
-<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a>  oc,</span>
-<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_event_probability&quot;</span>,</span>
-<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment event probability&quot;</span></span>
-<span id="cb4-60"><a href="#cb4-60" tabindex="-1"></a>)</span>
-<span id="cb4-61"><a href="#cb4-61" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(out_power)</span>
-<span id="cb4-62"><a href="#cb4-62" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(out_power)</span></code></pre></div>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a>effect_by_scenario <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a>  <span class="st">&quot;target event probability&quot;</span> <span class="ot">=</span> target,</span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a>  <span class="st">&quot;benchmark event probability&quot;</span> <span class="ot">=</span> benchmark</span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a>)</span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a>oc<span class="sc">$</span>true_event_probability <span class="ot">&lt;-</span> <span class="fu">unname</span>(effect_by_scenario[oc<span class="sc">$</span>scenario])</span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a></span>
+<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a>oc</span>
+<span id="cb4-60"><a href="#cb4-60" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
+<span id="cb4-61"><a href="#cb4-61" tabindex="-1"></a>  oc,</span>
+<span id="cb4-62"><a href="#cb4-62" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_event_probability&quot;</span>,</span>
+<span id="cb4-63"><a href="#cb4-63" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment event probability&quot;</span></span>
+<span id="cb4-64"><a href="#cb4-64" tabindex="-1"></a>)</span>
+<span id="cb4-65"><a href="#cb4-65" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(out_power)</span>
+<span id="cb4-66"><a href="#cb4-66" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(out_power)</span></code></pre></div>
 <p>The operating-characteristic plot compares scenarios on the
 clinically natural event-probability scale. The stopping plot then
 expands one scenario to show where enrollment ends and why. Finally, the
@@ -522,11 +547,14 @@ decision map uses the retained traces to show how interim predictive
 probabilities fall relative to the expected-success and futility
 thresholds. For large calibration grids, retain traces only for
 scenarios whose interim behavior needs closer inspection.</p>
-<p>Calibration proceeds the same way as for two-arm designs: if the type
-I error under the null (where the true rate equals the benchmark) is
-above the desired level, raise <code>prob_ha</code>; if power is too
-low, increase <code>N_total</code> or relax the
-<code>Fn</code>/<code>Sn</code> thresholds.</p>
+<p>Calibration proceeds as for two-arm designs. Screen candidate
+<code>prob_ha</code> values under the null, where the true event
+probability equals the benchmark, and validate the selected design with
+a fresh seed and adequate Monte Carlo precision. If sample size or the
+stopping thresholds change to improve power, reassess type I error for
+the revised design. The <a href="calibrating-prob-ha.html">calibration
+vignette</a> demonstrates this workflow; its log-rank threshold is
+specific to that example.</p>
 </div>
 <div id="a-practical-caveat-on-benchmarks" class="section level2">
 <h2>A practical caveat on benchmarks</h2>
@@ -551,9 +579,9 @@ sensitivity.</p>
 two-arm randomized design with a log-rank decision rule.</li>
 <li>The “Bayesian piecewise-exponential designs” vignette covers the
 same decision rule used here, but in a two-arm setting and with
-non-constant hazards. The piecewise machinery applies directly to
-single-arm trials too (just keep <code>hazard_control = NULL</code> and
-pass a per-interval <code>hazard_treatment</code> vector).</li>
+non-constant hazards. The same piecewise-exponential specification
+applies to single-arm trials when <code>hazard_control = NULL</code> and
+<code>hazard_treatment</code> contains one hazard per interval.</li>
 <li><code>?survival_adapt</code> documents all arguments.</li>
 </ul>
 </div>

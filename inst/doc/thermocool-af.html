@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>ThermoCool AF: immediate success from predictive probability</title>
+
+<script src="libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="libs/viz-1.8.2/viz.js"></script>
+<link href="libs/DiagrammeR-styles-0.2/styles.css" rel="stylesheet" />
+<script src="libs/grViz-binding-1.0.12/grViz.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<link rel="stylesheet" href="libs/vignette.css" type="text/css" />
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">ThermoCool AF: immediate success from
+predictive probability</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
+<p>The ThermoCool AF trial is a useful published example of a Bayesian
+design that used the same predictive probability to distinguish between
+stopping accrual and declaring immediate trial success. The trial
+compared radiofrequency catheter ablation with antiarrhythmic drug
+therapy (ADT) in patients with symptomatic paroxysmal atrial
+fibrillation. It was registered as <a
+href="https://clinicaltrials.gov/study/NCT00116428">NCT00116428</a>,
+reported by <a href="https://doi.org/10.1001/jama.2009.2029">Wilber et
+al. (2010)</a>, and supported FDA premarket approval supplement <a
+href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpma/pma.cfm?id=P030031S011">P030031/S011</a>.</p>
+<p>This vignette uses the trial to explain <code>Qn</code>, the upper
+boundary for immediate success in <code>goldilocks</code>. It is a
+<strong>ThermoCool-inspired package example, not an exact reconstruction
+or regulatory validation</strong>. JAMA and the public FDA record
+disclose the principal decision boundaries and longitudinal imputation
+model, but omit or redact the numerical operating-characteristic
+scenarios. The trial designers subsequently published the default
+failure-time generator, accrual schedule, and scenario grid in <a
+href="https://doi.org/10.1201/EBK1439825488">Berry et al. (2010, Section
+5.8, pp. 241–246)</a>. This example uses those published defaults. The
+complete regulatory sensitivity suite remains unavailable, and the
+package rule deliberately differs from the trial protocol in its
+futility statistic, comparison operators, and treatment of a separate
+information gate for an early claim.</p>
+<div id="trial-and-endpoint" class="section level2">
+<h2>Trial and endpoint</h2>
+<p>ThermoCool AF was a prospective, multicenter, randomized, unblinded
+trial. Patients were allocated within site in blocks of 11: seven to
+catheter ablation and four to ADT. The primary effectiveness endpoint
+was freedom from protocol-defined treatment failure during comparable
+nine-month evaluation periods. Treatment failure included documented
+symptomatic paroxysmal atrial fibrillation; the protocol also classified
+specified procedural, medication, and intolerance outcomes as
+failures.</p>
+<p>The planned maximum sample size was 230. Decision-capable interim
+analyses were planned after 150, 175, and 200 accrued patients. Trial
+success was defined by</p>
+<p><span class="math display">\[
+\Pr(p_T &gt; p_C \mid \mathcal D) \ge 0.98,
+\]</span></p>
+<p>where <span class="math inline">\(p_T\)</span> and <span
+class="math inline">\(p_C\)</span> are the nine-month chronic-success
+probabilities in the ablation and ADT groups. The final posterior
+criterion was selected through simulation to control the one-sided type
+I error at no more than 0.025.</p>
+<p>The trial began with a fixed-sample frequentist design and was
+amended while accrual was underway. FDA’s advisory briefing reports that
+the 106 patients already accrued were treated as a non-stopping look in
+the operating-characteristic simulations, with a statistical penalty.
+This historical feature is important to the reported calibration, but it
+is not an actionable <code>interim_look</code> in the package example
+below.</p>
+</div>
+<div id="the-reported-stopping-rules" class="section level2">
+<h2>The reported stopping rules</h2>
+<p>At a planned interim analysis, the trial calculated the predictive
+probability that the final posterior criterion would be met after
+currently enrolled patients completed follow-up. In package notation
+this is <span class="math inline">\(P_{n,\ell}\)</span>. The reported
+rules were:</p>
+<ul>
+<li>If <span class="math inline">\(P_{n,\ell} \ge 0.99\)</span>, stop
+and make an early claim of success.</li>
+<li>Otherwise, stop accrual for expected success if <span
+class="math inline">\(P_{n,\ell} \ge 0.90\)</span> at <span
+class="math inline">\(n=150\)</span>, or <span
+class="math inline">\(P_{n,\ell} \ge 0.80\)</span> at <span
+class="math inline">\(n=175\)</span> or <span
+class="math inline">\(200\)</span>, and continue follow-up.</li>
+<li>Stop for futility if <strong>both</strong> <span
+class="math inline">\(P_{n,\ell}&lt;0.01\)</span> and <span
+class="math inline">\(P_{n_{\max},\ell}&lt;0.01\)</span>.</li>
+<li>Otherwise, continue accrual.</li>
+</ul>
+<p>The JAMA methods summarize the 0.99 rule as an immediate claim at an
+interim analysis. The FDA advisory materials provide an operational
+detail: after accrual stopped, the early-claim analysis was performed
+once either 4.5 months had elapsed or at least 50% of enrolled patients
+had complete effectiveness outcomes, whichever came first. The public
+record reports that this information condition was satisfied when the
+first analysis was performed.</p>
+<p>In practice, the first planned 150-patient analysis occurred after
+160 patients had been enrolled because of operational timing; 148 were
+in the effectiveness analysis. The predictive probability was greater
+than 0.999, 50% of enrollees had an effectiveness determination, and the
+trial declared early success. Seven more patients were enrolled before
+shutdown was completed, producing 167 randomized patients in the updated
+report.</p>
+</div>
+<div id="the-four-way-goldilocks-rule" class="section level2">
+<h2>The four-way <code>goldilocks</code> rule</h2>
+<p>The package enhancement keeps predictive probability as the key
+interim statistic but uses the following ordered rule:</p>
+<p><span class="math display">\[
+d_\ell =
+\begin{cases}
+\text{immediate success}, &amp; P_{n,\ell} &gt; Q_\ell, \\
+\text{stop accrual for expected success},
+  &amp; S_\ell &lt; P_{n,\ell} \le Q_\ell, \\
+\text{binding futility},
+  &amp; P_{n,\ell} \le S_\ell
+    \text{ and } P_{n_{\max},\ell} &lt; F_\ell, \\
+\text{continue}, &amp; \text{otherwise.}
+\end{cases}
+\]</span></p>
+<div id="htmlwidget-c28b55c87d0933276fbe" style="width:100%;height:670px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-c28b55c87d0933276fbe">{"x":{"diagram":"\ndigraph thermocool_rule {\n  graph [rankdir = TB, bgcolor = transparent, ranksep = 0.50, nodesep = 0.35]\n  node [shape = box, style = rounded, fontname = Helvetica, fontsize = 13,\n        margin = 0.11]\n  edge [fontname = Helvetica, fontsize = 11]\n\n  start [label = \"At look l, calculate\nP[n,l] and P[nmax,l]\"]\n  q [shape = diamond, label = \"P[n,l] > Q[l]?\"]\n  immediate [label = \"Stop\nDeclare immediate success\"]\n  s [shape = diamond, label = \"P[n,l] > S[l]?\"]\n  expected [label = \"Stop accrual\nComplete follow-up, then analyze\"]\n  f [shape = diamond, label = \"P[nmax,l] < F[l]?\"]\n  futile [label = \"Stop for futility\nBinding decision\"]\n  continue [label = \"Continue accrual\nTo the next look\"]\n\n  start -> q\n  q -> immediate [label = \"Yes\"]\n  q -> s [label = \"No: P[n,l] <= Q[l]\"]\n  s -> expected [label = \"Yes\"]\n  s -> f [label = \"No\"]\n  f -> futile [label = \"Yes\"]\n  f -> continue [label = \"No\"]\n}\n","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<p>Decision order matters. An immediate-success crossing is terminal
+even if a futility boundary also appears crossed. Equality with
+<code>Qn</code> does not declare immediate success, and equality with
+<code>Sn</code> does not stop accrual for expected success.
+<code>Qn = 1</code> disables immediate-success stopping at a look
+because a predictive probability cannot be strictly greater than one.
+The package requires <code>Sn &lt;= Qn</code> at every look; setting
+them equal removes the expected-success interval at that look.</p>
+<p>For the ThermoCool-inspired mapping, the threshold vectors are:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>N_total <span class="ot">&lt;-</span> <span class="dv">230</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>interim_look <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">150</span>, <span class="dv">175</span>, <span class="dv">200</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>Qn <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fl">0.99</span>, <span class="fu">length</span>(interim_look))</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>Sn <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.90</span>, <span class="fl">0.80</span>, <span class="fl">0.80</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>Fn <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fl">0.01</span>, <span class="fu">length</span>(interim_look))</span></code></pre></div>
+<p>These values reproduce the reported numerical boundaries, but not
+every protocol detail. The package uses strict upper-boundary
+comparisons, whereas the publications describe “at least” 0.99, 0.90, or
+0.80. More importantly, the package’s requested futility rule uses only
+<span class="math inline">\(P_{n_{\max},\ell}&lt;F_\ell\)</span>;
+ThermoCool AF required both predictive probabilities below 0.01. The
+package also evaluates <code>Qn</code> at each scheduled look without a
+separate 4.5-month/50% information gate.</p>
+</div>
+<div id="source-and-status-of-modeled-inputs" class="section level2">
+<h2>Source and status of modeled inputs</h2>
+<p>The labels in the following table are used consistently throughout
+the vignette:</p>
+<ul>
+<li><strong>reported</strong>: stated numerically in a public primary
+source;</li>
+<li><strong>inferred</strong>: calculated from, or used to encode,
+reported information;</li>
+<li><strong>assumed</strong>: selected for this runnable package
+example;</li>
+<li><strong>unavailable</strong>: needed for exact reconstruction but
+not publicly supplied or not representable in the current package
+interface.</li>
+</ul>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="25%" />
+<col width="3%" />
+<col width="54%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Input</th>
+<th align="left">Value</th>
+<th align="left">Status</th>
+<th align="left">Source and mapping</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>N_total</code></td>
+<td align="left">230</td>
+<td align="left">reported</td>
+<td align="left">JAMA Statistical Methods and FDA advisory briefing</td>
+</tr>
+<tr class="even">
+<td align="left"><code>interim_look</code></td>
+<td align="left">150, 175, 200</td>
+<td align="left">reported</td>
+<td align="left">JAMA Statistical Methods and FDA advisory briefing</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Qn</code></td>
+<td align="left">0.99 at each look</td>
+<td align="left">reported</td>
+<td align="left">Reported early-claim boundary; package applies its
+strict &gt; rule</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Sn</code></td>
+<td align="left">0.90, 0.80, 0.80</td>
+<td align="left">reported</td>
+<td align="left">Reported expected-success accrual boundaries</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Fn</code></td>
+<td align="left">0.01 at each look</td>
+<td align="left">reported</td>
+<td align="left">Reported numeric futility boundary</td>
+</tr>
+<tr class="even">
+<td align="left">Futility statistic</td>
+<td align="left">Package uses P[nmax,l] only</td>
+<td align="left">assumed</td>
+<td align="left">The requested enhancement differs from ThermoCool’s
+P[n,l] and P[nmax,l] rule</td>
+</tr>
+<tr class="odd">
+<td align="left">Early-claim information gate</td>
+<td align="left">Not represented</td>
+<td align="left">reported</td>
+<td align="left">FDA briefing and transcript report 4.5 months or 50%
+endpoint-complete</td>
+</tr>
+<tr class="even">
+<td align="left">Non-stopping 106-patient look</td>
+<td align="left">Not represented as an actionable look</td>
+<td align="left">reported</td>
+<td align="left">FDA requested it after the mid-trial amendment; zero
+probability of stopping</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prob_ha</code></td>
+<td align="left">0.98</td>
+<td align="left">reported</td>
+<td align="left">Historical success was at least 0.98; the package
+classifies success using its strict &gt; comparison</td>
+</tr>
+<tr class="even">
+<td align="left"><code>method</code>, <code>alternative</code>,
+<code>h0</code></td>
+<td align="left">bayes-bin, less, 0</td>
+<td align="left">inferred</td>
+<td align="left">Failure is the modeled binary event, so benefit is a
+lower treatment failure probability</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prior_bin</code></td>
+<td align="left">Beta(1, 1) in both arms</td>
+<td align="left">reported</td>
+<td align="left">FDA advisory transcript and sponsor briefing</td>
+</tr>
+<tr class="even">
+<td align="left"><code>cutpoints</code>,
+<code>generation_cutpoints</code>, <code>end_of_study</code></td>
+<td align="left">0.5 and 2 months; 9-month horizon</td>
+<td align="left">reported</td>
+<td align="left">JAMA and FDA describe breaks at 2 weeks/0.5 months and
+2 months</td>
+</tr>
+<tr class="odd">
+<td align="left">Sponsor predictive hazard prior</td>
+<td align="left">Three arm-specific piecewise rates with a hierarchical
+prior</td>
+<td align="left">reported</td>
+<td align="left">FDA briefing discloses Exp(rate = 1) priors on the
+Gamma hyperparameters, but not a directly reproducible fixed package
+prior</td>
+</tr>
+<tr class="even">
+<td align="left"><code>prior_surv</code>,
+<code>prior_surv_final</code></td>
+<td align="left">Fixed Gamma(1, 1) approximation in each interval and
+arm</td>
+<td align="left">assumed</td>
+<td align="left">Assumed plug-in approximation that sets both Gamma
+hyperparameters to the mean, 1, of their disclosed Exp(rate = 1)
+hyperpriors; not the sponsor’s hierarchical prior</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>block</code>, <code>rand_ratio</code></td>
+<td align="left">11; control 4 : treatment 7</td>
+<td align="left">reported</td>
+<td align="left">JAMA Study Design</td>
+</tr>
+<tr class="even">
+<td align="left"><code>lambda</code>, <code>lambda_time</code></td>
+<td align="left">2, 3, 5 patients/month; changes at months 2 and 4</td>
+<td align="left">reported</td>
+<td align="left">Berry et al., Section 5.8, p. 245; default simulation
+accrual schedule</td>
+</tr>
+<tr class="odd">
+<td align="left">Failure-time generator</td>
+<td align="left">Base hazards 0.65, 0.161, 0.05/month, scaled to target
+success</td>
+<td align="left">reported</td>
+<td align="left">Berry et al., Section 5.8, pp. 244–245; common shape
+scaled to an arm-specific nine-month success probability</td>
+</tr>
+<tr class="even">
+<td align="left">Worked benefit scenario</td>
+<td align="left">Treatment 0.45; control 0.20 chronic success</td>
+<td align="left">reported</td>
+<td align="left">One of the benefit cases in Berry et al., Table 5.19;
+selected for the worked example</td>
+</tr>
+<tr class="odd">
+<td align="left">Published OC scenario grid</td>
+<td align="left">Three null and eight benefit scenarios</td>
+<td align="left">reported</td>
+<td align="left">Berry et al., Tables 5.18–5.19</td>
+</tr>
+<tr class="even">
+<td align="left">Observed enrollment history</td>
+<td align="left">11 after year 1; 53 after year 2; 160 at analysis; 167
+at close</td>
+<td align="left">reported</td>
+<td align="left">FDA sponsor briefing; realized history retained only
+for comparison</td>
+</tr>
+<tr class="odd">
+<td align="left">Observed interval hazards</td>
+<td align="left">June 2008 failures divided by exposure within each
+interval</td>
+<td align="left">inferred</td>
+<td align="left">Derived from FDA SSED Table 8; descriptive
+observed-data rates, not planning assumptions</td>
+</tr>
+<tr class="even">
+<td align="left">Complete regulatory sensitivity suite</td>
+<td align="left">Not publicly available in full</td>
+<td align="left">unavailable</td>
+<td align="left">The FDA briefing redacts its scenario table, and Berry
+et al. notes additional sensitivity simulations without enumerating all
+of them</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prop_loss</code></td>
+<td align="left">0 in each arm</td>
+<td align="left">assumed</td>
+<td align="left">No random loss generator is reported for the published
+scenarios; observed exclusions are not equivalent to random
+censoring</td>
+</tr>
+<tr class="even">
+<td align="left"><code>imputed_final</code></td>
+<td align="left">TRUE</td>
+<td align="left">inferred</td>
+<td align="left">JAMA reports multiple imputation for incomplete
+outcomes; the available package analysis is an approximation</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>N_impute</code></td>
+<td align="left">100 for one trial; 40 for small OC simulations; 5,000
+in validation template</td>
+<td align="left">assumed</td>
+<td align="left">The evaluated counts are run-time choices; Berry et
+al. reports 1,000 burn-in and 5,000 retained MCMC iterations, which are
+not identical to the package computation</td>
+</tr>
+<tr class="even">
+<td align="left">Evaluated <code>N_trials</code></td>
+<td align="left">50 per scenario</td>
+<td align="left">assumed</td>
+<td align="left">Illustrative choice; the sponsor briefing reports
+10,000 trials per scenario, while Berry et al. reports 25,000 for its
+tabulated null simulations</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="mapping-the-longitudinal-analysis-model"
+class="section level2">
+<h2>Mapping the longitudinal analysis model</h2>
+<p>The completed endpoint is binary, but its status is learned over
+time. The trial predicted unknown nine-month outcomes with an
+arm-specific piecewise-exponential time-to-failure model. The three
+intervals were 0–0.5 months, 0.5–2 months, and 2–9 months. After
+imputation, a patient’s failure time was reduced to a binary
+chronic-failure indicator, and the completed-data analysis compared
+arm-specific success probabilities.</p>
+<p><code>goldilocks</code> represents this structure with
+<code>method = "bayes-bin"</code> and
+<code>binary_imputation = "event-time"</code>. The package is
+parameterized on event probability, so the code models chronic
+<strong>failure</strong> rather than chronic success:</p>
+<p><span class="math display">\[
+p_{\text{failure}} = 1 - p_{\text{chronic success}}.
+\]</span></p>
+<p>Consequently, superiority of ablation is encoded as</p>
+<p><span class="math display">\[
+\Pr(p_{T,\text{failure}} - p_{C,\text{failure}} &lt; 0 \mid \mathcal D)
+&gt; 0.98,
+\]</span></p>
+<p>using <code>alternative = "less"</code> and <code>h0 = 0</code>.
+Independent uniform priors on the published chronic-success
+probabilities become the same independent <code>Beta(1, 1)</code> priors
+after complementing to failure probabilities.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>analysis_cutpoints_month <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="dv">2</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>effectiveness_horizon_month <span class="ot">&lt;-</span> <span class="dv">9</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>prior_bin <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co"># Assumed plug-in approximation using the means of the disclosed Exp(1)</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># hyperpriors; this is not the sponsor&#39;s hierarchical hazard prior.</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>prior_surv <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">shape =</span> <span class="dv">1</span>, <span class="at">rate =</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>The fixed <code>prior_surv</code> above approximates the sponsor’s
+analysis prior. It is separate from the true hazards used to generate
+virtual trials when studying the design’s operating characteristics.</p>
+</div>
+<div id="published-design-generating-assumptions"
+class="section level2">
+<h2>Published design-generating assumptions</h2>
+<p>Berry et al. (2010, pp. 244–245) gives the default
+piecewise-exponential failure generator that was not enumerated in JAMA
+or the public FDA summaries. Its base monthly hazards are 0.65, 0.161,
+and 0.05. Over the three analysis intervals, these give nine-month
+chronic success of approximately 0.40:</p>
+<p><span class="math display">\[
+\exp\{-0.5(0.65)-1.5(0.161)-7(0.05)\} \approx 0.40.
+\]</span></p>
+<p>For a target chronic-success probability <span
+class="math inline">\(p\)</span>, all three base hazards are multiplied
+by the same factor:</p>
+<p><span class="math display">\[
+\theta_j(p) = \theta_j^*\frac{\log(p)}{\log(0.40)}.
+\]</span></p>
+<p>Thus, scenario probabilities change the overall failure level while
+preserving the shape of the failure-time distribution.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>base_chronic_success <span class="ot">&lt;-</span> <span class="fl">0.40</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>base_failure_hazard <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="st">`</span><span class="at">0--0.5</span><span class="st">`</span> <span class="ot">=</span> <span class="fl">0.65</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="st">`</span><span class="at">0.5--2</span><span class="st">`</span> <span class="ot">=</span> <span class="fl">0.161</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="st">`</span><span class="at">2--9</span><span class="st">`</span> <span class="ot">=</span> <span class="fl">0.05</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>hazard_for_success <span class="ot">&lt;-</span> <span class="cf">function</span>(p) {</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">length</span>(p) <span class="sc">==</span> <span class="dv">1</span><span class="dt">L</span>, <span class="fu">is.finite</span>(p), p <span class="sc">&gt;</span> <span class="dv">0</span>, p <span class="sc">&lt;</span> <span class="dv">1</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  base_failure_hazard <span class="sc">*</span> <span class="fu">log</span>(p) <span class="sc">/</span> <span class="fu">log</span>(base_chronic_success)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>}</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>published_scenarios <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">Type =</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="st">&quot;Null&quot;</span>, <span class="dv">3</span>), <span class="fu">rep</span>(<span class="st">&quot;Benefit&quot;</span>, <span class="dv">8</span>)),</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="st">`</span><span class="at">Treatment chronic success</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>    <span class="fl">0.20</span>, <span class="fl">0.40</span>, <span class="fl">0.60</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>    <span class="fl">0.30</span>, <span class="fl">0.40</span>, <span class="fl">0.45</span>, <span class="fl">0.50</span>, <span class="fl">0.50</span>, <span class="fl">0.60</span>, <span class="fl">0.65</span>, <span class="fl">0.70</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  ),</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>  <span class="st">`</span><span class="at">Control chronic success</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>    <span class="fl">0.20</span>, <span class="fl">0.40</span>, <span class="fl">0.60</span>,</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>    <span class="fl">0.20</span>, <span class="fl">0.20</span>, <span class="fl">0.20</span>, <span class="fl">0.20</span>, <span class="fl">0.40</span>, <span class="fl">0.40</span>, <span class="fl">0.40</span>, <span class="fl">0.40</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  ),</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>)</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(published_scenarios, <span class="at">digits =</span> <span class="dv">2</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Type</th>
+<th align="right">Treatment chronic success</th>
+<th align="right">Control chronic success</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Null</td>
+<td align="right">0.20</td>
+<td align="right">0.2</td>
+</tr>
+<tr class="even">
+<td align="left">Null</td>
+<td align="right">0.40</td>
+<td align="right">0.4</td>
+</tr>
+<tr class="odd">
+<td align="left">Null</td>
+<td align="right">0.60</td>
+<td align="right">0.6</td>
+</tr>
+<tr class="even">
+<td align="left">Benefit</td>
+<td align="right">0.30</td>
+<td align="right">0.2</td>
+</tr>
+<tr class="odd">
+<td align="left">Benefit</td>
+<td align="right">0.40</td>
+<td align="right">0.2</td>
+</tr>
+<tr class="even">
+<td align="left">Benefit</td>
+<td align="right">0.45</td>
+<td align="right">0.2</td>
+</tr>
+<tr class="odd">
+<td align="left">Benefit</td>
+<td align="right">0.50</td>
+<td align="right">0.2</td>
+</tr>
+<tr class="even">
+<td align="left">Benefit</td>
+<td align="right">0.50</td>
+<td align="right">0.4</td>
+</tr>
+<tr class="odd">
+<td align="left">Benefit</td>
+<td align="right">0.60</td>
+<td align="right">0.4</td>
+</tr>
+<tr class="even">
+<td align="left">Benefit</td>
+<td align="right">0.65</td>
+<td align="right">0.4</td>
+</tr>
+<tr class="odd">
+<td align="left">Benefit</td>
+<td align="right">0.70</td>
+<td align="right">0.4</td>
+</tr>
+</tbody>
+</table>
+<p>Tables 5.18 and 5.19 of Berry et al. report the three null cases and
+eight benefit cases shown above. There was therefore no single
+treatment-control event-rate assumption. For the runnable example, we
+select the published 0.45-versus-0.20 chronic-success case, which the
+monograph discusses specifically:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>worked_chronic_success <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">treatment =</span> <span class="fl">0.45</span>, <span class="at">control =</span> <span class="fl">0.20</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>hazard_treatment <span class="ot">&lt;-</span> <span class="fu">hazard_for_success</span>(worked_chronic_success[<span class="st">&quot;treatment&quot;</span>])</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>hazard_control <span class="ot">&lt;-</span> <span class="fu">hazard_for_success</span>(worked_chronic_success[<span class="st">&quot;control&quot;</span>])</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>planning_hazards <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">Arm =</span> <span class="fu">c</span>(<span class="st">&quot;Catheter ablation&quot;</span>, <span class="st">&quot;ADT control&quot;</span>),</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="st">`</span><span class="at">Target nine-month chronic success</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">unname</span>(worked_chronic_success),</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="st">`</span><span class="at">Hazard 0--0.5 months</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(hazard_treatment[<span class="dv">1</span>], hazard_control[<span class="dv">1</span>]),</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="st">`</span><span class="at">Hazard 0.5--2 months</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(hazard_treatment[<span class="dv">2</span>], hazard_control[<span class="dv">2</span>]),</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="st">`</span><span class="at">Hazard 2--9 months</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(hazard_treatment[<span class="dv">3</span>], hazard_control[<span class="dv">3</span>]),</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(planning_hazards, <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="15%" />
+<col width="30%" />
+<col width="18%" />
+<col width="18%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Arm</th>
+<th align="right">Target nine-month chronic success</th>
+<th align="right">Hazard 0–0.5 months</th>
+<th align="right">Hazard 0.5–2 months</th>
+<th align="right">Hazard 2–9 months</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Catheter ablation</td>
+<td align="right">0.45</td>
+<td align="right">0.566</td>
+<td align="right">0.140</td>
+<td align="right">0.044</td>
+</tr>
+<tr class="even">
+<td align="left">ADT control</td>
+<td align="right">0.20</td>
+<td align="right">1.142</td>
+<td align="right">0.283</td>
+<td align="right">0.088</td>
+</tr>
+</tbody>
+</table>
+<p>The same source reports a default simulation accrual rate of two
+patients per month for the first two months, three per month for the
+next two months, and five per month from the fifth month onward (Berry
+et al., 2010, p. 245).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>enrollment_rate_per_month <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">months_0_to_2 =</span> <span class="dv">2</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">months_2_to_4 =</span> <span class="dv">3</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">months_4_plus =</span> <span class="dv">5</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>enrollment_rate_change_month <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">4</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="st">`</span><span class="at">Trial-calendar interval</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;0--2 months&quot;</span>, <span class="st">&quot;2--4 months&quot;</span>, <span class="st">&quot;4+ months&quot;</span>),</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="st">`</span><span class="at">Patients per month</span><span class="st">`</span> <span class="ot">=</span> enrollment_rate_per_month,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>)</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;               Trial-calendar interval Patients per month</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; months_0_to_2             0--2 months                  2</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; months_2_to_4             2--4 months                  3</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; months_4_plus               4+ months                  5</span></span></code></pre></div>
+<p>These are reported defaults for simulations of the amended adaptive
+design. <code>goldilocks</code> maps the three rates to its piecewise
+Poisson arrival process; the monograph reports the rate schedule but
+does not specify enough operational detail to verify that its
+enrollment-time generator was identical. They should not be interpreted
+as the original 2004 fixed-design forecast: the adaptive proposal was
+developed after accrual had begun and 106 patients were already
+enrolled.</p>
+</div>
+<div id="assumptions-versus-the-reported-trial-history"
+class="section level2">
+<h2>Assumptions versus the reported trial history</h2>
+<p>The <a
+href="https://www.accessdata.fda.gov/cdrh_docs/pdf3/P030031S011B.pdf">FDA
+Summary of Safety and Effectiveness Data, Table 8, p. 13</a> reports
+June 2008 exposure and failure counts for the same three intervals.
+Dividing failures by exposure gives observed-data rates, not prospective
+design assumptions:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>fda_interval_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">arm =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;control&quot;</span>), <span class="at">each =</span> <span class="dv">3</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">interval =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;0--0.5&quot;</span>, <span class="st">&quot;0.5--2&quot;</span>, <span class="st">&quot;2--9&quot;</span>), <span class="dv">2</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">exposure_months =</span> <span class="fu">c</span>(<span class="fl">40.21</span>, <span class="fl">104.17</span>, <span class="fl">413.09</span>, <span class="fl">23.27</span>, <span class="fl">54.21</span>, <span class="fl">90.46</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">failures =</span> <span class="fu">c</span>(<span class="dv">26</span>, <span class="dv">3</span>, <span class="dv">7</span>, <span class="dv">13</span>, <span class="dv">14</span>, <span class="dv">20</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>)</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>fda_interval_data<span class="sc">$</span>hazard_per_month <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  fda_interval_data,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  failures <span class="sc">/</span> exposure_months</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(fda_interval_data, <span class="at">digits =</span> <span class="dv">4</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="left">arm</th>
+<th align="left">interval</th>
+<th align="right">exposure_months</th>
+<th align="right">failures</th>
+<th align="right">hazard_per_month</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">treatment</td>
+<td align="left">0–0.5</td>
+<td align="right">40.21</td>
+<td align="right">26</td>
+<td align="right">0.6466</td>
+</tr>
+<tr class="even">
+<td align="left">treatment</td>
+<td align="left">0.5–2</td>
+<td align="right">104.17</td>
+<td align="right">3</td>
+<td align="right">0.0288</td>
+</tr>
+<tr class="odd">
+<td align="left">treatment</td>
+<td align="left">2–9</td>
+<td align="right">413.09</td>
+<td align="right">7</td>
+<td align="right">0.0169</td>
+</tr>
+<tr class="even">
+<td align="left">control</td>
+<td align="left">0–0.5</td>
+<td align="right">23.27</td>
+<td align="right">13</td>
+<td align="right">0.5587</td>
+</tr>
+<tr class="odd">
+<td align="left">control</td>
+<td align="left">0.5–2</td>
+<td align="right">54.21</td>
+<td align="right">14</td>
+<td align="right">0.2583</td>
+</tr>
+<tr class="even">
+<td align="left">control</td>
+<td align="left">2–9</td>
+<td align="right">90.46</td>
+<td align="right">20</td>
+<td align="right">0.2211</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>observed_hazard_treatment <span class="ot">&lt;-</span> <span class="fu">subset</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  fda_interval_data,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  arm <span class="sc">==</span> <span class="st">&quot;treatment&quot;</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)<span class="sc">$</span>hazard_per_month</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>observed_hazard_control <span class="ot">&lt;-</span> <span class="fu">subset</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  fda_interval_data,</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  arm <span class="sc">==</span> <span class="st">&quot;control&quot;</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>)<span class="sc">$</span>hazard_per_month</span></code></pre></div>
+<p>The planning and observed interval rates differ in shape as well as
+level:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>hazard_comparison <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">Interval =</span> <span class="fu">names</span>(base_failure_hazard),</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="st">`</span><span class="at">Planning: treatment</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">unname</span>(hazard_treatment),</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="st">`</span><span class="at">Observed: treatment</span><span class="st">`</span> <span class="ot">=</span> observed_hazard_treatment,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="st">`</span><span class="at">Planning: control</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">unname</span>(hazard_control),</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="st">`</span><span class="at">Observed: control</span><span class="st">`</span> <span class="ot">=</span> observed_hazard_control,</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>)</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(hazard_comparison, <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="10%" />
+<col width="23%" />
+<col width="23%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Interval</th>
+<th align="right">Planning: treatment</th>
+<th align="right">Observed: treatment</th>
+<th align="right">Planning: control</th>
+<th align="right">Observed: control</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">0–0.5</td>
+<td align="right">0.566</td>
+<td align="right">0.647</td>
+<td align="right">1.142</td>
+<td align="right">0.559</td>
+</tr>
+<tr class="even">
+<td align="left">0.5–2</td>
+<td align="right">0.140</td>
+<td align="right">0.029</td>
+<td align="right">0.283</td>
+<td align="right">0.258</td>
+</tr>
+<tr class="odd">
+<td align="left">2–9</td>
+<td align="right">0.044</td>
+<td align="right">0.017</td>
+<td align="right">0.088</td>
+<td align="right">0.221</td>
+</tr>
+</tbody>
+</table>
+<p>Inserting the observed rates into a continuous piecewise-exponential
+distribution gives a stronger treatment contrast than the selected
+planning case. The JAMA Kaplan–Meier estimates were also more favorable
+to ablation:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>interval_length_month <span class="ot">&lt;-</span> <span class="fu">diff</span>(<span class="fu">c</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="dv">0</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  analysis_cutpoints_month,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  effectiveness_horizon_month</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>))</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>chronic_success_comparison <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>  <span class="at">Arm =</span> <span class="fu">c</span>(<span class="st">&quot;Catheter ablation&quot;</span>, <span class="st">&quot;ADT control&quot;</span>),</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  <span class="st">`</span><span class="at">Published worked scenario</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">unname</span>(worked_chronic_success),</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>  <span class="st">`</span><span class="at">Implied by observed FDA interval rates</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>    <span class="fu">exp</span>(<span class="sc">-</span><span class="fu">sum</span>(observed_hazard_treatment <span class="sc">*</span> interval_length_month)),</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>    <span class="fu">exp</span>(<span class="sc">-</span><span class="fu">sum</span>(observed_hazard_control <span class="sc">*</span> interval_length_month))</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  ),</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>  <span class="st">`</span><span class="at">JAMA Kaplan-Meier estimate</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="fl">0.66</span>, <span class="fl">0.16</span>),</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  <span class="st">`</span><span class="at">FDA SSED Kaplan-Meier estimate</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="fl">0.64</span>, <span class="fl">0.16</span>),</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>)</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(chronic_success_comparison, <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="12%" />
+<col width="18%" />
+<col width="27%" />
+<col width="19%" />
+<col width="21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Arm</th>
+<th align="right">Published worked scenario</th>
+<th align="right">Implied by observed FDA interval rates</th>
+<th align="right">JAMA Kaplan-Meier estimate</th>
+<th align="right">FDA SSED Kaplan-Meier estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Catheter ablation</td>
+<td align="right">0.45</td>
+<td align="right">0.616</td>
+<td align="right">0.66</td>
+<td align="right">0.64</td>
+</tr>
+<tr class="even">
+<td align="left">ADT control</td>
+<td align="right">0.20</td>
+<td align="right">0.109</td>
+<td align="right">0.16</td>
+<td align="right">0.16</td>
+</tr>
+</tbody>
+</table>
+<p>The FDA-rate probabilities are descriptive approximations. They need
+not equal the Kaplan–Meier estimates because they insert raw interval
+rates into a continuous distribution without the sponsor’s posterior
+calculation, handling of time-zero failures, or analysis-population
+rules. The 0.66 and 0.64 ablation estimates are also source- and
+cutoff-specific rather than interchangeable: JAMA reports 0.66, whereas
+the FDA SSED reports 0.64.</p>
+<p>The published accrual model also differs sharply from the early
+operational history reported in the <a
+href="https://web.archive.org/web/20170222051859/https://www.fda.gov/ohrms/dockets/ac/08/briefing/2008-4393b1-01-%20%20Sponsors%20Executive%20Summary.pdf">FDA
+sponsor briefing, internal p. 128</a>. Under the package convention that
+the first participant enrolls at time zero, the default simulation model
+expects about 51 participants by month 12 and 111 by month 24. The trial
+had only 11 and 53, respectively, before enrollment accelerated. It
+reached 160 at the September 2007 analysis and 167 when enrollment
+closed the following month:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>expected_enrollment <span class="ot">&lt;-</span> <span class="cf">function</span>(month) {</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  interval_time <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>    <span class="fu">min</span>(month, <span class="dv">2</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>    <span class="fu">max</span>(<span class="fu">min</span>(month <span class="sc">-</span> <span class="dv">2</span>, <span class="dv">2</span>), <span class="dv">0</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>    <span class="fu">max</span>(month <span class="sc">-</span> <span class="dv">4</span>, <span class="dv">0</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  )</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(enrollment_rate_per_month <span class="sc">*</span> interval_time)</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>}</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>accrual_comparison <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="at">Milestone =</span> <span class="fu">c</span>(</span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>    <span class="st">&quot;After year 1&quot;</span>,</span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>    <span class="st">&quot;After year 2&quot;</span>,</span>
+<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>    <span class="st">&quot;First planned analysis&quot;</span>,</span>
+<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>    <span class="st">&quot;Enrollment close&quot;</span></span>
+<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>  ),</span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>  <span class="st">`</span><span class="at">Approximate trial month</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">24</span>, <span class="dv">35</span>, <span class="dv">36</span>),</span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>  <span class="st">`</span><span class="at">Reported cumulative enrollment</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="dv">11</span>, <span class="dv">53</span>, <span class="dv">160</span>, <span class="dv">167</span>),</span>
+<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a>  <span class="st">`</span><span class="at">Expected under published simulation default</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">vapply</span>(</span>
+<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a>    <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">24</span>, <span class="dv">35</span>, <span class="dv">36</span>),</span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a>    expected_enrollment,</span>
+<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a>    <span class="fu">numeric</span>(<span class="dv">1</span>)</span>
+<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a>  ),</span>
+<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a>)</span>
+<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a></span>
+<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(accrual_comparison, <span class="at">digits =</span> <span class="dv">0</span>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="18%" />
+<col width="19%" />
+<col width="25%" />
+<col width="36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Milestone</th>
+<th align="right">Approximate trial month</th>
+<th align="right">Reported cumulative enrollment</th>
+<th align="right">Expected under published simulation default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">After year 1</td>
+<td align="right">12</td>
+<td align="right">11</td>
+<td align="right">51</td>
+</tr>
+<tr class="even">
+<td align="left">After year 2</td>
+<td align="right">24</td>
+<td align="right">53</td>
+<td align="right">111</td>
+</tr>
+<tr class="odd">
+<td align="left">First planned analysis</td>
+<td align="right">35</td>
+<td align="right">160</td>
+<td align="right">166</td>
+</tr>
+<tr class="even">
+<td align="left">Enrollment close</td>
+<td align="right">36</td>
+<td align="right">167</td>
+<td align="right">171</td>
+</tr>
+</tbody>
+</table>
+<p>For an observed-history sensitivity analysis based on the reported
+year-end totals, the corresponding piecewise average rates are:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>observed_enrollment_rate_per_month <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">year_1 =</span> (<span class="dv">11</span> <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">year_2 =</span> (<span class="dv">53</span> <span class="sc">-</span> <span class="dv">11</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">year_3 =</span> (<span class="dv">167</span> <span class="sc">-</span> <span class="dv">53</span>) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>observed_enrollment_rate_change_month <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">24</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="st">`</span><span class="at">Trial-calendar interval</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>    <span class="st">&quot;0--12 months&quot;</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>    <span class="st">&quot;12--24 months&quot;</span>,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>    <span class="st">&quot;24--36 months&quot;</span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>  ),</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>  <span class="st">`</span><span class="at">Observed-history patients per month</span><span class="st">`</span> <span class="ot">=</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>    observed_enrollment_rate_per_month,</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>)</span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt;        Trial-calendar interval Observed-history patients per month</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; year_1            0--12 months                           0.8333333</span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; year_2           12--24 months                           3.5000000</span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; year_3           24--36 months                           9.5000000</span></span></code></pre></div>
+<p>The analysis-month values are approximate calendar offsets from the
+first enrollment in October 2004. Relative to the published 2, 3, and 5
+per-month default, the observed-history reconstruction is approximately
+0.83, 3.50, and 9.50 per month: much slower during the first two years
+and substantially faster late in the trial. The year-three rate uses the
+closing count of 167; 160 was the preceding decision-analysis count
+rather than the final enrollment total.</p>
+</div>
+<div id="one-simulated-trial" class="section level2">
+<h2>One simulated trial</h2>
+<p>The following analysis simulates one trial replicate under the
+published 0.45-versus-0.20 benefit scenario and default accrual
+schedule. It uses only 100 predictive imputations for illustration. That
+is too few for regulatory calibration of boundaries as extreme as 0.99
+and 0.01.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1030236</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>thermocool_trial <span class="ot">&lt;-</span> <span class="fu">survival_adapt</span>(</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> hazard_treatment,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="at">hazard_control =</span> hazard_control,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  <span class="at">cutpoints =</span> analysis_cutpoints_month,</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="at">generation_cutpoints =</span> analysis_cutpoints_month,</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  <span class="at">N_total =</span> N_total,</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>  <span class="at">lambda =</span> enrollment_rate_per_month,</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>  <span class="at">lambda_time =</span> enrollment_rate_change_month,</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  <span class="at">interim_look =</span> interim_look,</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  <span class="at">end_of_study =</span> effectiveness_horizon_month,</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>  <span class="at">prior_surv =</span> prior_surv,</span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>  <span class="at">prior_surv_final =</span> prior_surv,</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>  <span class="at">prior_bin =</span> prior_bin,</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>  <span class="at">bin_method =</span> <span class="st">&quot;quadrature&quot;</span>,</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a>  <span class="at">binary_imputation =</span> <span class="st">&quot;event-time&quot;</span>,</span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">11</span>,</span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">4</span>, <span class="at">treatment =</span> <span class="dv">7</span>),</span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a>  <span class="at">Fn =</span> Fn,</span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a>  <span class="at">Sn =</span> Sn,</span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a>  <span class="at">Qn =</span> Qn,</span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.98</span>,</span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">100</span>,</span>
+<span id="cb13-28"><a href="#cb13-28" tabindex="-1"></a>  <span class="at">empty_interval =</span> <span class="st">&quot;prior&quot;</span>,</span>
+<span id="cb13-29"><a href="#cb13-29" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;bayes-bin&quot;</span>,</span>
+<span id="cb13-30"><a href="#cb13-30" tabindex="-1"></a>  <span class="at">imputed_final =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb13-31"><a href="#cb13-31" tabindex="-1"></a>  <span class="at">return_trace =</span> <span class="cn">TRUE</span></span>
+<span id="cb13-32"><a href="#cb13-32" tabindex="-1"></a>)</span>
+<span id="cb13-33"><a href="#cb13-33" tabindex="-1"></a></span>
+<span id="cb13-34"><a href="#cb13-34" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb13-35"><a href="#cb13-35" tabindex="-1"></a>  thermocool_trial<span class="sc">$</span>summary[, <span class="fu">c</span>(</span>
+<span id="cb13-36"><a href="#cb13-36" tabindex="-1"></a>    <span class="st">&quot;N_enrolled&quot;</span>,</span>
+<span id="cb13-37"><a href="#cb13-37" tabindex="-1"></a>    <span class="st">&quot;ppp_success&quot;</span>,</span>
+<span id="cb13-38"><a href="#cb13-38" tabindex="-1"></a>    <span class="st">&quot;stop_immediate_success&quot;</span>,</span>
+<span id="cb13-39"><a href="#cb13-39" tabindex="-1"></a>    <span class="st">&quot;stop_expected_success&quot;</span>,</span>
+<span id="cb13-40"><a href="#cb13-40" tabindex="-1"></a>    <span class="st">&quot;stop_futility&quot;</span>,</span>
+<span id="cb13-41"><a href="#cb13-41" tabindex="-1"></a>    <span class="st">&quot;trial_success&quot;</span>,</span>
+<span id="cb13-42"><a href="#cb13-42" tabindex="-1"></a>    <span class="st">&quot;stopping_reason&quot;</span>,</span>
+<span id="cb13-43"><a href="#cb13-43" tabindex="-1"></a>    <span class="st">&quot;decision_time&quot;</span></span>
+<span id="cb13-44"><a href="#cb13-44" tabindex="-1"></a>  )],</span>
+<span id="cb13-45"><a href="#cb13-45" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb13-46"><a href="#cb13-46" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb13-47"><a href="#cb13-47" tabindex="-1"></a>    <span class="st">&quot;Enrolled N&quot;</span>, <span class="st">&quot;Predictive success&quot;</span>, <span class="st">&quot;Immediate success stop&quot;</span>,</span>
+<span id="cb13-48"><a href="#cb13-48" tabindex="-1"></a>    <span class="st">&quot;Expected success stop&quot;</span>, <span class="st">&quot;Futility stop&quot;</span>, <span class="st">&quot;Trial success&quot;</span>,</span>
+<span id="cb13-49"><a href="#cb13-49" tabindex="-1"></a>    <span class="st">&quot;Stopping reason&quot;</span>, <span class="st">&quot;Decision time&quot;</span></span>
+<span id="cb13-50"><a href="#cb13-50" tabindex="-1"></a>  )</span>
+<span id="cb13-51"><a href="#cb13-51" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="8%" />
+<col width="14%" />
+<col width="17%" />
+<col width="16%" />
+<col width="10%" />
+<col width="10%" />
+<col width="13%" />
+<col width="10%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">Enrolled N</th>
+<th align="right">Predictive success</th>
+<th align="right">Immediate success stop</th>
+<th align="right">Expected success stop</th>
+<th align="right">Futility stop</th>
+<th align="left">Trial success</th>
+<th align="left">Stopping reason</th>
+<th align="right">Decision time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">150</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="left">TRUE</td>
+<td align="left">immediate_success</td>
+<td align="right">31.56</td>
+</tr>
+</tbody>
+</table>
+<p><code>stop_immediate_success</code> is an official terminal success
+decision. It does not wait for a later completed-follow-up analysis, so
+<code>post_prob_ha</code> and the final effect estimate are
+<code>NA</code>. Binding futility is likewise an official terminal
+failure. For compatibility, the package still attempts its historical
+completed-follow-up diagnostic after futility; if that diagnostic cannot
+be computed, <code>post_prob_ha</code> and <code>est_final</code> are
+<code>NA</code> and <code>trial_success</code> remains
+<code>FALSE</code>.</p>
+<p>The trace makes the ordered rule auditable:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  thermocool_trial<span class="sc">$</span>trace[, <span class="fu">c</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>    <span class="st">&quot;look&quot;</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>    <span class="st">&quot;planned_N&quot;</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>    <span class="st">&quot;ppp_stop_now&quot;</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>    <span class="st">&quot;immediate_success_threshold&quot;</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>    <span class="st">&quot;success_threshold&quot;</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>    <span class="st">&quot;ppp_success_at_max&quot;</span>,</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>    <span class="st">&quot;futility_threshold&quot;</span>,</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>    <span class="st">&quot;decision&quot;</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>  )],</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>    <span class="st">&quot;Look&quot;</span>, <span class="st">&quot;Planned N&quot;</span>, <span class="st">&quot;PPSn&quot;</span>, <span class="st">&quot;Immediate success cut&quot;</span>,</span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>    <span class="st">&quot;Expected success cut&quot;</span>, <span class="st">&quot;PPSmax&quot;</span>, <span class="st">&quot;Futility cut&quot;</span>, <span class="st">&quot;Decision&quot;</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>  )</span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="4%" />
+<col width="9%" />
+<col width="4%" />
+<col width="20%" />
+<col width="19%" />
+<col width="6%" />
+<col width="12%" />
+<col width="21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">Look</th>
+<th align="right">Planned N</th>
+<th align="right">PPSn</th>
+<th align="right">Immediate success cut</th>
+<th align="right">Expected success cut</th>
+<th align="right">PPSmax</th>
+<th align="right">Futility cut</th>
+<th align="left">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">150</td>
+<td align="right">1</td>
+<td align="right">0.99</td>
+<td align="right">0.9</td>
+<td align="right">1</td>
+<td align="right">0.01</td>
+<td align="left">stop_immediate_success</td>
+</tr>
+</tbody>
+</table>
+<p>Here, PPSn is <code>ppp_stop_now</code>, PPSmax is
+<code>ppp_success_at_max</code>, and the three cut columns show the
+immediate-success, expected-success, and futility thresholds. Only looks
+actually reached appear in the trace. An immediate-success decision
+prevents all subsequent looks.</p>
+</div>
+<div id="small-operating-characteristic-demonstration"
+class="section level2">
+<h2>Small operating-characteristic demonstration</h2>
+<p>For simulation, collect common inputs in a named list and vary only
+the data-generating hazards. The first scenario is the published
+0.45-versus-0.20 benefit case. The second assigns the 0.20-success
+control profile to both arms, which is one of the published null
+cases.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>thermocool_design <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">cutpoints =</span> analysis_cutpoints_month,</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">generation_cutpoints =</span> analysis_cutpoints_month,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">N_total =</span> N_total,</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  <span class="at">lambda =</span> enrollment_rate_per_month,</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>  <span class="at">lambda_time =</span> enrollment_rate_change_month,</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>  <span class="at">interim_look =</span> interim_look,</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>  <span class="at">end_of_study =</span> effectiveness_horizon_month,</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>  <span class="at">prior_surv =</span> prior_surv,</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>  <span class="at">prior_surv_final =</span> prior_surv,</span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>  <span class="at">prior_bin =</span> prior_bin,</span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>  <span class="at">bin_method =</span> <span class="st">&quot;quadrature&quot;</span>,</span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>  <span class="at">binary_imputation =</span> <span class="st">&quot;event-time&quot;</span>,</span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">11</span>,</span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">4</span>, <span class="at">treatment =</span> <span class="dv">7</span>),</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a>  <span class="at">Fn =</span> Fn,</span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a>  <span class="at">Sn =</span> Sn,</span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a>  <span class="at">Qn =</span> Qn,</span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.98</span>,</span>
+<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">40</span>,</span>
+<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a>  <span class="at">empty_interval =</span> <span class="st">&quot;prior&quot;</span>,</span>
+<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;bayes-bin&quot;</span>,</span>
+<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a>  <span class="at">imputed_final =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">50</span>,</span>
+<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">2</span>,</span>
+<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a>  <span class="at">return_trace =</span> <span class="cn">TRUE</span></span>
+<span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a>)</span>
+<span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a></span>
+<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a>thermocool_benefit <span class="ot">&lt;-</span> <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb15-33"><a href="#cb15-33" tabindex="-1"></a>  thermocool_design,</span>
+<span id="cb15-34"><a href="#cb15-34" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb15-35"><a href="#cb15-35" tabindex="-1"></a>    <span class="at">hazard_treatment =</span> hazard_treatment,</span>
+<span id="cb15-36"><a href="#cb15-36" tabindex="-1"></a>    <span class="at">hazard_control =</span> hazard_control,</span>
+<span id="cb15-37"><a href="#cb15-37" tabindex="-1"></a>    <span class="at">seed =</span> <span class="dv">1030236</span></span>
+<span id="cb15-38"><a href="#cb15-38" tabindex="-1"></a>  )</span>
+<span id="cb15-39"><a href="#cb15-39" tabindex="-1"></a>))</span>
+<span id="cb15-40"><a href="#cb15-40" tabindex="-1"></a></span>
+<span id="cb15-41"><a href="#cb15-41" tabindex="-1"></a>thermocool_null <span class="ot">&lt;-</span> <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb15-42"><a href="#cb15-42" tabindex="-1"></a>  thermocool_design,</span>
+<span id="cb15-43"><a href="#cb15-43" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb15-44"><a href="#cb15-44" tabindex="-1"></a>    <span class="at">hazard_treatment =</span> hazard_control,</span>
+<span id="cb15-45"><a href="#cb15-45" tabindex="-1"></a>    <span class="at">hazard_control =</span> hazard_control,</span>
+<span id="cb15-46"><a href="#cb15-46" tabindex="-1"></a>    <span class="at">seed =</span> <span class="dv">1030237</span></span>
+<span id="cb15-47"><a href="#cb15-47" tabindex="-1"></a>  )</span>
+<span id="cb15-48"><a href="#cb15-48" tabindex="-1"></a>))</span>
+<span id="cb15-49"><a href="#cb15-49" tabindex="-1"></a></span>
+<span id="cb15-50"><a href="#cb15-50" tabindex="-1"></a>oc_small <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
+<span id="cb15-51"><a href="#cb15-51" tabindex="-1"></a>  <span class="st">&quot;Published benefit: 0.45 vs 0.20&quot;</span> <span class="ot">=</span> thermocool_benefit,</span>
+<span id="cb15-52"><a href="#cb15-52" tabindex="-1"></a>  <span class="st">&quot;Published null: 0.20 vs 0.20&quot;</span> <span class="ot">=</span> thermocool_null</span>
+<span id="cb15-53"><a href="#cb15-53" tabindex="-1"></a>))</span>
+<span id="cb15-54"><a href="#cb15-54" tabindex="-1"></a></span>
+<span id="cb15-55"><a href="#cb15-55" tabindex="-1"></a>oc_display <span class="ot">&lt;-</span> oc_small[, <span class="fu">c</span>(</span>
+<span id="cb15-56"><a href="#cb15-56" tabindex="-1"></a>  <span class="st">&quot;scenario&quot;</span>,</span>
+<span id="cb15-57"><a href="#cb15-57" tabindex="-1"></a>  <span class="st">&quot;n_analyzed&quot;</span>,</span>
+<span id="cb15-58"><a href="#cb15-58" tabindex="-1"></a>  <span class="st">&quot;power&quot;</span>,</span>
+<span id="cb15-59"><a href="#cb15-59" tabindex="-1"></a>  <span class="st">&quot;stop_immediate_success&quot;</span>,</span>
+<span id="cb15-60"><a href="#cb15-60" tabindex="-1"></a>  <span class="st">&quot;stop_success&quot;</span>,</span>
+<span id="cb15-61"><a href="#cb15-61" tabindex="-1"></a>  <span class="st">&quot;stop_futility&quot;</span>,</span>
+<span id="cb15-62"><a href="#cb15-62" tabindex="-1"></a>  <span class="st">&quot;stop_max_N&quot;</span>,</span>
+<span id="cb15-63"><a href="#cb15-63" tabindex="-1"></a>  <span class="st">&quot;mean_N&quot;</span></span>
+<span id="cb15-64"><a href="#cb15-64" tabindex="-1"></a>)]</span>
+<span id="cb15-65"><a href="#cb15-65" tabindex="-1"></a><span class="fu">names</span>(oc_display)[<span class="fu">names</span>(oc_display) <span class="sc">==</span> <span class="st">&quot;stop_success&quot;</span>] <span class="ot">&lt;-</span></span>
+<span id="cb15-66"><a href="#cb15-66" tabindex="-1"></a>  <span class="st">&quot;stop_expected_success&quot;</span></span>
+<span id="cb15-67"><a href="#cb15-67" tabindex="-1"></a></span>
+<span id="cb15-68"><a href="#cb15-68" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb15-69"><a href="#cb15-69" tabindex="-1"></a>  oc_display,</span>
+<span id="cb15-70"><a href="#cb15-70" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb15-71"><a href="#cb15-71" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb15-72"><a href="#cb15-72" tabindex="-1"></a>    <span class="st">&quot;Scenario&quot;</span>, <span class="st">&quot;Trials analyzed&quot;</span>, <span class="st">&quot;Power&quot;</span>, <span class="st">&quot;Immediate success stop&quot;</span>,</span>
+<span id="cb15-73"><a href="#cb15-73" tabindex="-1"></a>    <span class="st">&quot;Expected success stop&quot;</span>, <span class="st">&quot;Futility stop&quot;</span>, <span class="st">&quot;Maximum N&quot;</span>, <span class="st">&quot;Mean N&quot;</span></span>
+<span id="cb15-74"><a href="#cb15-74" tabindex="-1"></a>  )</span>
+<span id="cb15-75"><a href="#cb15-75" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="24%" />
+<col width="12%" />
+<col width="4%" />
+<col width="17%" />
+<col width="16%" />
+<col width="10%" />
+<col width="7%" />
+<col width="5%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Scenario</th>
+<th align="right">Trials analyzed</th>
+<th align="right">Power</th>
+<th align="right">Immediate success stop</th>
+<th align="right">Expected success stop</th>
+<th align="right">Futility stop</th>
+<th align="right">Maximum N</th>
+<th align="right">Mean N</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Published benefit: 0.45 vs 0.20</td>
+<td align="right">50</td>
+<td align="right">0.94</td>
+<td align="right">0.68</td>
+<td align="right">0.16</td>
+<td align="right">0.02</td>
+<td align="right">0.14</td>
+<td align="right">165.7</td>
+</tr>
+<tr class="even">
+<td align="left">Published null: 0.20 vs 0.20</td>
+<td align="right">50</td>
+<td align="right">0.00</td>
+<td align="right">0.00</td>
+<td align="right">0.02</td>
+<td align="right">0.86</td>
+<td align="right">0.12</td>
+<td align="right">170.1</td>
+</tr>
+</tbody>
+</table>
+<p>With only 50 trials and 40 imputations per look, these estimates have
+substantial Monte Carlo error. They illustrate the mutually exclusive
+stopping categories; they do not estimate the trial’s reported operating
+characteristics. <code>summarise_sims()</code> uses
+<code>stop_success</code> for stopping accrual for expected success and
+reports immediate success separately as
+<code>stop_immediate_success</code>.</p>
+<p>The no-effect scenario provides a useful view of all four decision
+regions:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(thermocool_null)</span></code></pre></div>
+<p><img
+src="thermocool-af_files/figure-html/stopping-plot-1.png" /><!-- --></p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(thermocool_null)</span></code></pre></div>
+<p><img
+src="thermocool-af_files/figure-html/decision-plot-1.png" /><!-- --></p>
+<p>In a decision plot, <code>Qn</code> adds a second horizontal boundary
+above <code>Sn</code>. Observations above <code>Qn</code> are immediate
+successes. Observations between <code>Sn</code> and <code>Qn</code> stop
+accrual for expected success. At or below <code>Sn</code>,
+<code>Fn</code> separates binding futility from continued accrual.</p>
+</div>
+<div id="operating-characteristic-evaluation" class="section level2">
+<h2>Operating-characteristic evaluation</h2>
+<p>A design that permits immediate declaration of success must be
+calibrated as a whole. Neither <code>Qn = 0.99</code> nor
+<code>prob_ha = 0.98</code> automatically controls type I error in a new
+design. Calibration must reflect all looks, the final analysis, the
+binding futility rule, accrual, incomplete follow-up, the predictive
+model, and Monte Carlo error.</p>
+<p>The following unevaluated template increases both the number of
+simulated trials and the predictive-imputation count. Its 5,000
+predictive draws are the closest package analogue to the 5,000 retained
+iterations described by Berry et al.; the package does not reproduce the
+sponsor’s hierarchical sampler or its 1,000-iteration burn-in. The
+25,000 trial replicates match the count stated for Berry et al.’s null
+table; the sponsor briefing instead describes 10,000 trials per
+scenario, and the monograph does not state a replicate count for its
+benefit table.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>thermocool_full_design <span class="ot">&lt;-</span> <span class="fu">modifyList</span>(thermocool_design, <span class="fu">list</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">25000</span>,</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">5000</span>,</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>  <span class="at">ncores =</span> <span class="dv">8</span>,</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>  <span class="at">return_trace =</span> <span class="cn">FALSE</span></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>))</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>q_grid <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.975</span>, <span class="fl">0.99</span>, <span class="fl">0.995</span>, <span class="fl">1.00</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>full_null <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_along</span>(q_grid), <span class="cf">function</span>(i) {</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>  <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a>    <span class="fu">modifyList</span>(thermocool_full_design, <span class="fu">list</span>(<span class="at">Qn =</span> q_grid[i])),</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>    <span class="fu">list</span>(</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>      <span class="at">hazard_treatment =</span> hazard_control,</span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a>      <span class="at">hazard_control =</span> hazard_control,</span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">1031000</span> <span class="sc">+</span> i</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a>    )</span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a>  ))</span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a>})</span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="fu">names</span>(full_null) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;null 0.20 vs 0.20: Qn = &quot;</span>, q_grid)</span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a></span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a>full_benefit <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">seq_along</span>(q_grid), <span class="cf">function</span>(i) {</span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a>  <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a>    <span class="fu">modifyList</span>(thermocool_full_design, <span class="fu">list</span>(<span class="at">Qn =</span> q_grid[i])),</span>
+<span id="cb18-25"><a href="#cb18-25" tabindex="-1"></a>    <span class="fu">list</span>(</span>
+<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a>      <span class="at">hazard_treatment =</span> hazard_treatment,</span>
+<span id="cb18-27"><a href="#cb18-27" tabindex="-1"></a>      <span class="at">hazard_control =</span> hazard_control,</span>
+<span id="cb18-28"><a href="#cb18-28" tabindex="-1"></a>      <span class="at">seed =</span> <span class="dv">1032000</span> <span class="sc">+</span> i</span>
+<span id="cb18-29"><a href="#cb18-29" tabindex="-1"></a>    )</span>
+<span id="cb18-30"><a href="#cb18-30" tabindex="-1"></a>  ))</span>
+<span id="cb18-31"><a href="#cb18-31" tabindex="-1"></a>})</span>
+<span id="cb18-32"><a href="#cb18-32" tabindex="-1"></a><span class="fu">names</span>(full_benefit) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;benefit 0.45 vs 0.20: Qn = &quot;</span>, q_grid)</span>
+<span id="cb18-33"><a href="#cb18-33" tabindex="-1"></a></span>
+<span id="cb18-34"><a href="#cb18-34" tabindex="-1"></a>full_oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">c</span>(full_null, full_benefit))</span>
+<span id="cb18-35"><a href="#cb18-35" tabindex="-1"></a>full_oc[, <span class="fu">c</span>(</span>
+<span id="cb18-36"><a href="#cb18-36" tabindex="-1"></a>  <span class="st">&quot;scenario&quot;</span>,</span>
+<span id="cb18-37"><a href="#cb18-37" tabindex="-1"></a>  <span class="st">&quot;n_analyzed&quot;</span>,</span>
+<span id="cb18-38"><a href="#cb18-38" tabindex="-1"></a>  <span class="st">&quot;power&quot;</span>,</span>
+<span id="cb18-39"><a href="#cb18-39" tabindex="-1"></a>  <span class="st">&quot;power_mcse&quot;</span>,</span>
+<span id="cb18-40"><a href="#cb18-40" tabindex="-1"></a>  <span class="st">&quot;stop_immediate_success&quot;</span>,</span>
+<span id="cb18-41"><a href="#cb18-41" tabindex="-1"></a>  <span class="st">&quot;stop_immediate_success_mcse&quot;</span>,</span>
+<span id="cb18-42"><a href="#cb18-42" tabindex="-1"></a>  <span class="st">&quot;stop_success&quot;</span>,</span>
+<span id="cb18-43"><a href="#cb18-43" tabindex="-1"></a>  <span class="st">&quot;stop_futility&quot;</span>,</span>
+<span id="cb18-44"><a href="#cb18-44" tabindex="-1"></a>  <span class="st">&quot;stop_max_N&quot;</span>,</span>
+<span id="cb18-45"><a href="#cb18-45" tabindex="-1"></a>  <span class="st">&quot;mean_N&quot;</span>,</span>
+<span id="cb18-46"><a href="#cb18-46" tabindex="-1"></a>  <span class="st">&quot;mean_N_mcse&quot;</span></span>
+<span id="cb18-47"><a href="#cb18-47" tabindex="-1"></a>)]</span></code></pre></div>
+<p>Useful additional scenarios include weaker treatment effects,
+different control event rates, slower and faster accrual, arm-specific
+missingness, alternative piecewise hazards, and violations of the
+predictive model. The three published null cases and eight benefit cases
+in <code>published_scenarios</code> provide a natural starting grid. The
+null design should still be evaluated over a suitable nuisance-parameter
+range rather than at a single equal-arm profile. Because a 0.99 boundary
+is estimated from imputations, the predictive draw count should also be
+chosen so that decisions near <code>Qn</code>, <code>Sn</code>, and
+<code>Fn</code> are sufficiently stable.</p>
+</div>
+<div id="what-this-example-does-and-does-not-reproduce"
+class="section level2">
+<h2>What this example does and does not reproduce</h2>
+<p>The example preserves the central statistical idea:</p>
+<ul>
+<li>one current-sample predictive probability drives two distinct upper
+decisions;</li>
+<li><code>Qn</code> declares success immediately, whereas
+<code>Sn</code> only stops accrual;</li>
+<li><code>Fn</code> acts on predictive success at the maximum sample
+size; and</li>
+<li>all thresholds are evaluated in a prespecified order.</li>
+</ul>
+<p>It uses the published default failure generator, accrual schedule,
+and one published benefit scenario, but it does not reproduce the
+sponsor’s complete analysis, hierarchical hazard prior, confidential
+sensitivity suite, treatment-specific evaluation-window origins,
+site-stratified randomization sequences, protocol deviations, crossover,
+analysis-population exclusions, operational overrun, or the original
+two-predictive-probability futility requirement. It also does not
+recreate the mid-trial design amendment or its statistical penalty.
+Those distinctions are why the simulated numerical results should not be
+compared directly with the trial’s regulatory analysis.</p>
+</div>
+<div id="sources-and-document-roles" class="section level2">
+<h2>Sources and document roles</h2>
+<ul>
+<li><p>Berry SM, Carlin BP, Lee JJ, Müller P. <a
+href="https://doi.org/10.1201/EBK1439825488"><em>Bayesian Adaptive
+Methods for Clinical Trials</em></a>. Boca Raton, FL: Chapman &amp;
+Hall/CRC; 2010. Section 5.8, “Case study: Ablation device to treat
+atrial fibrillation,” pp. 241–246. This designer-authored case study
+supplies the default failure-time generator, its probability-scaling
+formula, the default accrual schedule, and the published
+operating-characteristic scenario grid used in this vignette.</p></li>
+<li><p>Wilber DJ, Pappone C, Neuzil P, et al. <a
+href="https://doi.org/10.1001/jama.2009.2029">Comparison of
+antiarrhythmic drug therapy and radiofrequency catheter ablation in
+patients with paroxysmal atrial fibrillation: a randomized controlled
+trial</a>. <em>JAMA</em>. 2010;303(4):333-340. <a
+href="doi:10.1001/jama.2009.2029"
+class="uri">doi:10.1001/jama.2009.2029</a>. The article reports the
+analysis boundaries and observed Kaplan–Meier results, but not the
+numerical simulation generator or accrual schedule.</p></li>
+<li><p>U.S. Food and Drug Administration. <a
+href="https://www.accessdata.fda.gov/cdrh_docs/pdf3/P030031S011B.pdf">Summary
+of Safety and Effectiveness Data, PMA P030031/S011</a>. Table 8, p. 13
+reports the June 2008 interval exposure and failures used above as
+observed-data comparisons, not planning assumptions.</p></li>
+<li><p>U.S. Food and Drug Administration. <a
+href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfAdvisory/details.cfm?mtg=705">Circulatory
+System Devices Panel, November 20, 2008 meeting materials</a>. This is
+the archive landing page for the FDA and sponsor summaries, slides,
+panel questions, and transcript.</p></li>
+<li><p>U.S. Food and Drug Administration. <a
+href="https://web.archive.org/web/20170222060225/https://www.fda.gov/ohrms/dockets/ac/08/briefing/2008-4393b1-01%20%20FDA%20executive%20summary%20FINAL.pdf">FDA
+Executive Summary, pp. 10–12</a>. It documents the amendment,
+106-patient non-stopping look, information gate, stopping rules, and
+hierarchical longitudinal model.</p></li>
+<li><p>Biosense Webster, Inc. <a
+href="https://web.archive.org/web/20170222051859/https://www.fda.gov/ohrms/dockets/ac/08/briefing/2008-4393b1-01-%20%20Sponsors%20Executive%20Summary.pdf">Sponsor
+Executive Summary</a>. Internal pp. 24–25 and 128 report the simulation
+exercise and realized enrollment history. The briefing says that 10,000
+trials per scenario were simulated, but its operating-characteristic
+table is redacted. Berry et al. later reports 25,000 simulations
+specifically for its tabulated null cases.</p></li>
+<li><p>U.S. Food and Drug Administration. <a
+href="https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfpma/pma.cfm?id=P030031S011">PMA
+supplement P030031/S011 approval record</a>. FDA issued the decision on
+February 6, 2009 for the expanded paroxysmal atrial-fibrillation
+indication.</p></li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

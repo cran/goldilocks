@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>ANTHEM-HFrEF: a published adaptive survival design</title>
+
+<script src="libs/header-attrs-2.30/header-attrs.js"></script>
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="libs/viz-1.8.2/viz.js"></script>
+<link href="libs/DiagrammeR-styles-0.2/styles.css" rel="stylesheet" />
+<script src="libs/grViz-binding-1.0.12/grViz.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<link rel="stylesheet" href="libs/vignette.css" type="text/css" />
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">ANTHEM-HFrEF: a published adaptive survival
+design</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
+<p>The ANTHEM-HFrEF pivotal study is a published example of Bayesian
+predictive sample-size adaptation paired with a conventional frequentist
+final analysis. The trial compared vagal nerve stimulation (VNS) plus
+guideline-directed medical therapy (GDMT) with GDMT alone in patients
+with heart failure and reduced ejection fraction. It was registered as
+<a href="https://clinicaltrials.gov/study/NCT03425422">NCT03425422</a>,
+its design was published by Konstam et al. (2019), and its results were
+published by Konstam et al. (2026).</p>
+<p>This vignette maps the morbidity and mortality component of the
+planned design to <code>goldilocks</code>. It is an explicit
+approximation, not a reconstruction or independent validation of the
+sponsor’s analysis. The public protocol, statistical analysis plan
+(SAP), and Adaptive Design Report (ADR) disclose substantially more
+detail than the journal articles alone, including the predictive model,
+priors, simulation profiles, and reference operating characteristics.
+Even with those documents, differences between the sponsor’s design and
+the analyses currently available in <code>goldilocks</code> remain
+important and are identified below.</p>
+<div id="clinical-question-and-planned-analysis" class="section level2">
+<h2>Clinical question and planned analysis</h2>
+<p>ANTHEM-HFrEF randomized patients 2:1 to VNS plus GDMT or GDMT alone.
+The primary efficacy endpoint was time from randomization to
+cardiovascular death or first heart-failure hospitalization. The planned
+maximum sample size was 1,000 patients, and the final primary analysis
+was a one-sided log-rank test. Superiority required a one-sided
+<em>P</em> value no larger than 0.019. That nominal level was calibrated
+by simulation so that the overall one-sided type I error, including the
+adaptive decisions, did not exceed 0.025.</p>
+<p>At an interim update, the design calculated two predictive
+probabilities:</p>
+<ul>
+<li><span class="math inline">\(\mathrm{PPS}_n\)</span>: probability
+that the final log-rank test would succeed if enrollment stopped at the
+current sample size and follow-up continued;</li>
+<li><span class="math inline">\(\mathrm{PPS}_{\mathrm{max}}\)</span>:
+probability that the final log-rank test would succeed if enrollment
+continued to 1,000 patients.</li>
+</ul>
+<p>Futility monitoring began at the first update, nominally at 400
+randomized patients, and stopped the trial if <span
+class="math inline">\(\mathrm{PPS}_{\mathrm{max}} &lt; 0.01\)</span>.
+Expected-success monitoring began at 500 patients and stopped enrollment
+if <span class="math inline">\(\mathrm{PPS}_n &gt; 0.95\)</span>.
+Enrollment-based updates then recurred after every additional 100
+patients through 1,000. The reported 400-patient update also required at
+least 300 patients to have nine months since randomization, and the
+design included additional futility updates four and eight months after
+the last patient was randomized.</p>
+<div id="htmlwidget-6753ac2fcfadd62adcab" style="width:100%;height:760px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-6753ac2fcfadd62adcab">{"x":{"diagram":"\ndigraph anthem_flow {\n  graph [rankdir = TB, bgcolor = transparent, ranksep = 0.45, nodesep = 0.30]\n  node [shape = box, style = rounded, fontname = Helvetica, fontsize = 13,\n        margin = 0.10]\n  edge [fontname = Helvetica, fontsize = 11]\n\n  start [label = \"Interim update\nN = 400*, 500, ..., 1000\"]\n  fut [shape = diamond, label = \"PPSmax < 0.01?\"]\n  stopf [label = \"Stop for futility\"]\n  eligible [shape = diamond, label = \"N = 500, ..., 900?\"]\n  succ [shape = diamond, label = \"PPSn > 0.95?\"]\n  stops [label = \"Stop enrollment\nfor expected success\"]\n  more [shape = diamond, label = \"N < 1000?\"]\n  accrue [label = \"Continue enrollment\nto next 100-patient look\"]\n  follow [label = \"Continue follow-up to\ncommon final study visit\"]\n  final [label = \"One-sided log-rank test\nsuccess if P <= 0.019\"]\n\n  start -> fut\n  fut -> stopf [label = \"Yes\"]\n  fut -> eligible [label = \"No\"]\n  eligible -> succ [label = \"Yes\"]\n  eligible -> more [label = \"No\"]\n  succ -> stops [label = \"Yes\"]\n  succ -> more [label = \"No\"]\n  more -> accrue [label = \"Yes\"]\n  accrue -> start\n  more -> follow [label = \"No\"]\n  stopf -> follow\n  stops -> follow\n  follow -> final\n}\n","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<p>The asterisk on 400 denotes the additional nine-month-information
+condition. The chart focuses on the morbidity and mortality sample-size
+rule; the trial also had safety, symptom, function, and regulatory
+decision criteria that are outside this package example.</p>
+</div>
+<div id="planned-design-versus-operational-history"
+class="section level2">
+<h2>Planned design versus operational history</h2>
+<p>The adaptive design and what actually happened must be kept separate.
+The registry reports 533 randomized patients. The final report excluded
+one incorrect randomization from the intent-to-treat population, leaving
+532 evaluable randomized patients. After the second interim analysis,
+the data monitoring committee recommended continuing the trial
+unchanged, but the sponsor stopped enrollment and closed the program for
+reasons outside the prespecified efficacy and futility rules. The
+published primary endpoint was neutral (hazard ratio 0.84, one-sided
+<em>P</em> = 0.115). Nothing in the simulations below represents or
+attempts to reproduce that operational decision or the observed patient
+data.</p>
+</div>
+<div id="source-and-status-of-every-modeled-input"
+class="section level2">
+<h2>Source and status of every modeled input</h2>
+<p>The status labels have the following meanings:</p>
+<ul>
+<li><strong>reported</strong>: stated numerically in a public primary
+source;</li>
+<li><strong>inferred</strong>: calculated from, or used to encode,
+reported information;</li>
+<li><strong>assumed</strong>: selected for this runnable package
+example;</li>
+<li><strong>unavailable</strong>: needed for exact reproduction but not
+publicly supplied.</li>
+</ul>
+<table>
+<colgroup>
+<col width="10%" />
+<col width="23%" />
+<col width="4%" />
+<col width="61%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Input</th>
+<th align="left">Value</th>
+<th align="left">Status</th>
+<th align="left">Source and mapping</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>N_total</code></td>
+<td align="left">1000</td>
+<td align="left">reported</td>
+<td align="left">ADR Sections 1.2 and 3</td>
+</tr>
+<tr class="even">
+<td align="left"><code>interim_look</code></td>
+<td align="left">400, 500, 600, 700, 800, 900</td>
+<td align="left">reported</td>
+<td align="left">ADR Section 3; maximum N is not an
+<code>interim_look</code> in <code>goldilocks</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>end_of_study</code></td>
+<td align="left">16 months (69.33 weeks)</td>
+<td align="left">reported</td>
+<td align="left">ADR Sections 1.4.1 and 3.3</td>
+</tr>
+<tr class="even">
+<td align="left"><code>rand_ratio</code></td>
+<td align="left">1 control : 2 treatment</td>
+<td align="left">reported</td>
+<td align="left">ADR Section 1.2; named package values identify control
+and treatment</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>block</code></td>
+<td align="left">3</td>
+<td align="left">assumed</td>
+<td align="left">ADR reports varying blocks of 3, 6, or 9; a fixed block
+of 3 is the closest available specification</td>
+</tr>
+<tr class="even">
+<td align="left"><code>lambda</code>, <code>lambda_time</code></td>
+<td align="left">Six-step ramp to 26 patients/month</td>
+<td align="left">inferred</td>
+<td align="left">ADR Sections 5.2 and 7 report a six-month ramp to a
+peak of 26/month</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>cutpoints</code></td>
+<td align="left">6 and 12 months</td>
+<td align="left">reported</td>
+<td align="left">ADR Section 2.1 reports 0-6, 6-12, 12-18, and &gt;18
+month intervals; the 16-month package horizon uses the first two
+cut-points</td>
+</tr>
+<tr class="even">
+<td align="left"><code>generation_cutpoints</code></td>
+<td align="left">12 months</td>
+<td align="left">reported</td>
+<td align="left">ADR Table 5 uses 0-12, 12-24, and &gt;24 month
+generating intervals; only the 12-month cut-point precedes the 16-month
+horizon</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>hazard_control</code></td>
+<td align="left">0.00828, 0.00240 events/week</td>
+<td align="left">reported</td>
+<td align="left">ADR Table 5, using its two generating hazards that
+apply before the 16-month horizon</td>
+</tr>
+<tr class="even">
+<td align="left"><code>hazard_treatment</code></td>
+<td align="left">0.70 x control hazard</td>
+<td align="left">inferred</td>
+<td align="left">ADR Sections 5.1 and 7 report the target hazard-ratio
+scenario</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prop_loss</code></td>
+<td align="left">0.10</td>
+<td align="left">reported</td>
+<td align="left">ADR Sections 5.3 and 7.2; independent exponential
+dropout CDF of 0.10 at 16 months</td>
+</tr>
+<tr class="even">
+<td align="left"><code>prior_surv</code></td>
+<td align="left">Gamma shapes 1; rates 1/0.0069, 1/0.0069, 1/0.0035</td>
+<td align="left">reported</td>
+<td align="left">ADR Table 1; <code>goldilocks</code> applies these
+independent priors to both arms</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>alternative</code></td>
+<td align="left">less</td>
+<td align="left">reported</td>
+<td align="left">ADR Equation 1 defines lower treatment hazard as
+benefit</td>
+</tr>
+<tr class="even">
+<td align="left"><code>h0</code></td>
+<td align="left">0</td>
+<td align="left">reported</td>
+<td align="left">ADR Equation 1 uses equality of survival
+distributions</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>Fn</code></td>
+<td align="left">0.01 at every modeled look</td>
+<td align="left">reported</td>
+<td align="left">ADR Section 3.2</td>
+</tr>
+<tr class="even">
+<td align="left"><code>Sn</code></td>
+<td align="left">1.00 at N=400; 0.95 at N=500,…,900</td>
+<td align="left">inferred</td>
+<td align="left">ADR Section 3.3; 1.00 disables package success stopping
+at N=400</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>prob_ha</code></td>
+<td align="left">0.981</td>
+<td align="left">inferred</td>
+<td align="left">1 minus the reported one-sided P-value threshold of
+0.019</td>
+</tr>
+<tr class="even">
+<td align="left"><code>method</code></td>
+<td align="left">logrank</td>
+<td align="left">reported</td>
+<td align="left">ADR Section 1.4.1</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>imputed_final</code></td>
+<td align="left">FALSE</td>
+<td align="left">inferred</td>
+<td align="left">The reported final analysis uses observed
+right-censored data</td>
+</tr>
+<tr class="even">
+<td align="left"><code>N_impute</code></td>
+<td align="left">300 evaluated</td>
+<td align="left">assumed</td>
+<td align="left">Illustrative setting; ADR Section 2.3.3 specifies at
+least 10,000 draws for actual interim analyses and 1,000 within design
+simulations</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>N_trials</code></td>
+<td align="left">20 per evaluated scenario</td>
+<td align="left">assumed</td>
+<td align="left">Illustrative study uses 20 per scenario; ADR Section
+5.5 used 1,000 trials per treatment-benefit scenario and 10,000 per null
+scenario</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="event-time-and-accrual-assumptions" class="section level2">
+<h2>Event-time and accrual assumptions</h2>
+<p>The ADR’s control-arm simulation profile with a 35% one-year event
+probability used weekly hazards 0.00828 through month 12, 0.00240 from
+months 12 to 24, and 0.00012 thereafter. This profile implies a
+three-year event probability close to the 43% planning value summarized
+in the final paper:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>weeks_per_month <span class="ot">&lt;-</span> <span class="dv">52</span> <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>sponsor_control_hazard_week <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.00828</span>, <span class="fl">0.00240</span>, <span class="fl">0.00012</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>sponsor_interval_length_week <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">52</span>, <span class="dv">3</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>control_event_probability_3y <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="fu">sum</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  sponsor_control_hazard_week <span class="sc">*</span> sponsor_interval_length_week</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>))</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">Quantity =</span> <span class="fu">c</span>(<span class="st">&quot;One-year control event probability&quot;</span>, <span class="st">&quot;Three-year control event probability&quot;</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">Value =</span> <span class="fu">c</span>(</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>    <span class="dv">1</span> <span class="sc">-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="fl">0.00828</span> <span class="sc">*</span> <span class="dv">52</span>),</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>    control_event_probability_3y</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  )</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt;                               Quantity     Value</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; 1   One-year control event probability 0.3498551</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 2 Three-year control event probability 0.4297041</span></span></code></pre></div>
+<p>The data-generating and predictive models use different partitions.
+We retain the predictive cut-points at 6 and 12 months and the
+generating cut-point at 12 months. The reported 18-month predictive
+cut-point and 24-month generating cut-point fall beyond this example’s
+16-month subject-level horizon, so neither can affect an event time or
+imputation and both are omitted.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>analysis_cutpoints_week <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">6</span>, <span class="dv">12</span>) <span class="sc">*</span> weeks_per_month</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>generation_cutpoints_week <span class="ot">&lt;-</span> <span class="dv">12</span> <span class="sc">*</span> weeks_per_month</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>end_of_study_week <span class="ot">&lt;-</span> <span class="dv">16</span> <span class="sc">*</span> weeks_per_month</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>hazard_control_week <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.00828</span>, <span class="fl">0.00240</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>hazard_treatment_target_week <span class="ot">&lt;-</span> <span class="fl">0.70</span> <span class="sc">*</span> hazard_control_week</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>hazard_treatment_null_week <span class="ot">&lt;-</span> hazard_control_week</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>prior_surv_approx <span class="ot">&lt;-</span> <span class="fu">rbind</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">shape =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">rate =</span> <span class="fu">c</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fl">0.0069</span>, <span class="dv">1</span> <span class="sc">/</span> <span class="fl">0.0069</span>, <span class="dv">1</span> <span class="sc">/</span> <span class="fl">0.0035</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>)</span></code></pre></div>
+<p>The reported accrual simulation used a Poisson process with a
+six-month ramp to a peak of 26 patients per month.
+<code>goldilocks</code> supports piecewise-constant rather than linear
+enrollment rates, so the code uses six one-month steps at the midpoints
+of the reported linear ramp. The construction preserves the expected
+enrollment during the six-month ramp.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>peak_rate_per_month <span class="ot">&lt;-</span> <span class="dv">26</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>ramp_rate_per_month <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  peak_rate_per_month <span class="sc">*</span> <span class="fu">seq</span>(<span class="dv">1</span>, <span class="dv">11</span>, <span class="at">by =</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  peak_rate_per_month</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>ramp_change_week <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>) <span class="sc">*</span> weeks_per_month</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>ramp_rate_per_week <span class="ot">&lt;-</span> ramp_rate_per_month <span class="sc">/</span> weeks_per_month</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>accrual_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="st">`</span><span class="at">Trial-calendar interval</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;Month &quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>),</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>    <span class="st">&quot;After month 6&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  ),</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="st">`</span><span class="at">Approximate patients/month</span><span class="st">`</span> <span class="ot">=</span> ramp_rate_per_month,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="st">`</span><span class="at">Patients/week supplied to goldilocks</span><span class="st">`</span> <span class="ot">=</span> ramp_rate_per_week,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>)</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(accrual_table, <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="27%" />
+<col width="30%" />
+<col width="42%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Trial-calendar interval</th>
+<th align="right">Approximate patients/month</th>
+<th align="right">Patients/week supplied to goldilocks</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Month 1</td>
+<td align="right">2.167</td>
+<td align="right">0.5</td>
+</tr>
+<tr class="even">
+<td align="left">Month 2</td>
+<td align="right">6.500</td>
+<td align="right">1.5</td>
+</tr>
+<tr class="odd">
+<td align="left">Month 3</td>
+<td align="right">10.833</td>
+<td align="right">2.5</td>
+</tr>
+<tr class="even">
+<td align="left">Month 4</td>
+<td align="right">15.167</td>
+<td align="right">3.5</td>
+</tr>
+<tr class="odd">
+<td align="left">Month 5</td>
+<td align="right">19.500</td>
+<td align="right">4.5</td>
+</tr>
+<tr class="even">
+<td align="left">Month 6</td>
+<td align="right">23.833</td>
+<td align="right">5.5</td>
+</tr>
+<tr class="odd">
+<td align="left">After month 6</td>
+<td align="right">26.000</td>
+<td align="right">6.0</td>
+</tr>
+</tbody>
+</table>
+<p>The same approximation can be inspected with the package’s enrollment
+plot. The expected curve, 20 illustrative Poisson trajectories, the
+maximum sample size, and the package’s per-participant follow-up setting
+are shown on the more interpretable month scale. Interim sample sizes
+are listed in the input table above.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">plot_enrollment</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">lambda =</span> ramp_rate_per_month,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">lambda_time =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">1000</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">16</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">n_sim =</span> <span class="dv">20</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">3425423</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">time_unit =</span> <span class="st">&quot;months&quot;</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">main =</span> <span class="st">&quot;Piecewise-constant accrual approximation&quot;</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>)</span></code></pre></div>
+<p><img
+src="anthem-hfref_files/figure-html/accrual-projection-1.png" /><!-- --></p>
+</div>
+<div id="a-one-trial-goldilocks-approximation" class="section level2">
+<h2>A one-trial <code>goldilocks</code> approximation</h2>
+<p>The ADR generated independent exponential dropout times with 10%
+cumulative dropout probability by 16 months. The package now uses the
+same dropout distribution: <code>prop_loss = 0.10</code> at the 16-month
+<code>end_of_study</code> gives rate <span
+class="math inline">\(-\log(0.90)/16\)</span> per month (converted to
+the weekly unit below). Events before dropout remain observed, so the
+actual proportion censored by dropout can be below 10% and varies across
+trials. The package’s shorter administrative follow-up for earlier
+recruits remains a separate approximation.</p>
+<p>The expected-success threshold is set to 1 at the 400-patient look.
+Since the package stops only when its predictive-probability point
+estimate is greater than <code>Sn</code>, this disables expected-success
+stopping at that look while retaining the futility calculation.
+<code>prob_ha = 1 - 0.019 = 0.981</code> maps the final one-sided
+log-rank criterion into the package convention of analyzing
+<code>1 - P</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>anthem_common <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">cutpoints =</span> analysis_cutpoints_week,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">generation_cutpoints =</span> generation_cutpoints_week,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">1000</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">lambda =</span> ramp_rate_per_week,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">lambda_time =</span> ramp_change_week,</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">interim_look =</span> <span class="fu">seq</span>(<span class="dv">400</span>, <span class="dv">900</span>, <span class="at">by =</span> <span class="dv">100</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">end_of_study =</span> end_of_study_week,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">prior_surv =</span> prior_surv_approx,</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">3</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">1</span>, <span class="at">treatment =</span> <span class="dv">2</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="fl">0.10</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fu">rep</span>(<span class="fl">0.01</span>, <span class="dv">6</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="fl">0.95</span>, <span class="dv">5</span>)),</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.981</span>,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">300</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="at">mc_conf_level =</span> <span class="fl">0.95</span>,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">empty_interval =</span> <span class="st">&quot;prior&quot;</span>,</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">imputed_final =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>)</span></code></pre></div>
+<p>The Bayesian piecewise-exponential posterior supplies predictive
+event times at each interim look. Each completed predictive data set is
+then judged by the frequentist one-sided log-rank test. Thus, Bayesian
+prediction determines whether the current sample size appears adequate
+or futile, while the final success criterion remains frequentist.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">3425422</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>anthem_trial <span class="ot">&lt;-</span> <span class="fu">do.call</span>(survival_adapt, <span class="fu">c</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  anthem_common,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>    <span class="at">hazard_treatment =</span> hazard_treatment_target_week,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>    <span class="at">hazard_control =</span> hazard_control_week,</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>    <span class="at">return_trace =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  )</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>))</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>anthem_trial<span class="sc">$</span>summary</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; 1          0.981      0        less         267       133        400  1000</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_immediate_success</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; 1    0.5211608        NA           0             1                      0</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt;   stop_expected_success trial_success stopping_reason decision_time</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; 1                     0         FALSE        futility      85.41171</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt;   accrual_stop_time analysis_ready_time planned_completion_time</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; 1          85.41171             154.745                 154.745</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt;   followup_person_time peak_active_followup</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; 1             21257.42                  296</span></span></code></pre></div>
+<p>The trace shows the predictive quantities only at looks reached
+before a stop. The 400-patient success threshold of 1 is the package
+encoding of a futility-only look.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>trace_display <span class="ot">&lt;-</span> anthem_trial<span class="sc">$</span>trace[<span class="fu">c</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="st">&quot;planned_N&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="st">&quot;calendar_time&quot;</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="st">&quot;events_treatment&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="st">&quot;events_control&quot;</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="st">&quot;ppp_stop_now&quot;</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="st">&quot;success_threshold&quot;</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="st">&quot;ppp_success_at_max&quot;</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="st">&quot;futility_threshold&quot;</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="st">&quot;decision&quot;</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>)]</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  trace_display,</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>    <span class="st">&quot;N&quot;</span>,</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>    <span class="st">&quot;Time&quot;</span>,</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>    <span class="st">&quot;VNS events&quot;</span>,</span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>    <span class="st">&quot;Control events&quot;</span>,</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>    <span class="st">&quot;PPSn&quot;</span>,</span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>    <span class="st">&quot;Success cut&quot;</span>,</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>    <span class="st">&quot;PPSmax&quot;</span>,</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>    <span class="st">&quot;Futility cut&quot;</span>,</span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>    <span class="st">&quot;Decision&quot;</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>  )</span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>)</span></code></pre></div>
+<table style="width:100%;">
+<colgroup>
+<col width="4%" />
+<col width="7%" />
+<col width="12%" />
+<col width="17%" />
+<col width="5%" />
+<col width="13%" />
+<col width="7%" />
+<col width="14%" />
+<col width="15%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">N</th>
+<th align="right">Time</th>
+<th align="right">VNS events</th>
+<th align="right">Control events</th>
+<th align="right">PPSn</th>
+<th align="right">Success cut</th>
+<th align="right">PPSmax</th>
+<th align="right">Futility cut</th>
+<th align="left">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">400</td>
+<td align="right">85.412</td>
+<td align="right">54</td>
+<td align="right">24</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.007</td>
+<td align="right">0.01</td>
+<td align="left">stop_futility</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">plot_trial_trace</span>(anthem_trial)</span></code></pre></div>
+<p><img
+src="anthem-hfref_files/figure-html/decision-trace-plot-1.png" /><!-- --></p>
+<p>This single simulated path is illustrative. Its selected sample size
+and final result are random and are not estimates of power or type I
+error.</p>
+</div>
+<div id="small-null-and-alternative-simulation" class="section level2">
+<h2>Small null and alternative simulation</h2>
+<p>The next two scenarios are intentionally small illustrative
+simulations: 20 trials under the null hazard ratio of 1 and 20 under the
+target hazard ratio of 0.70. The summary reports a Monte Carlo standard
+error and 95% Monte Carlo interval for every probability, making the
+numerical imprecision visible.</p>
+<p>The evaluated design uses 300 predictive draws per look to keep the
+vignette computation manageable. This is not a precision recommendation:
+it gives the predictive-probability estimate a resolution of about
+0.0033. The sponsor used 1,000 draws per look in its
+operating-characteristic simulations and at least 10,000 for actual
+interim analyses. The package reports exact bounds and Monte Carlo
+standard errors as diagnostics, but decisions use the point
+estimate.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>anthem_alt <span class="ot">&lt;-</span> <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  anthem_common,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>    <span class="at">hazard_treatment =</span> hazard_treatment_target_week,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>    <span class="at">hazard_control =</span> hazard_control_week,</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>    <span class="at">N_trials =</span> <span class="dv">20</span>,</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>    <span class="at">ncores =</span> <span class="dv">2</span>,</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>    <span class="at">seed =</span> <span class="dv">3425430</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  )</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>))</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>anthem_null <span class="ot">&lt;-</span> <span class="fu">do.call</span>(sim_trials, <span class="fu">c</span>(</span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  anthem_common,</span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>    <span class="at">hazard_treatment =</span> hazard_treatment_null_week,</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>    <span class="at">hazard_control =</span> hazard_control_week,</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>    <span class="at">N_trials =</span> <span class="dv">20</span>,</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>    <span class="at">ncores =</span> <span class="dv">2</span>,</span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a>    <span class="at">seed =</span> <span class="dv">3425431</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a>  )</span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a>))</span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a>anthem_oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a>  <span class="st">&quot;Null: HR = 1.00&quot;</span> <span class="ot">=</span> anthem_null,</span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a>  <span class="st">&quot;Target: HR = 0.70&quot;</span> <span class="ot">=</span> anthem_alt</span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a>))</span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a>oc_display <span class="ot">&lt;-</span> anthem_oc[<span class="fu">c</span>(</span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a>  <span class="st">&quot;scenario&quot;</span>,</span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a>  <span class="st">&quot;n_used&quot;</span>,</span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a>  <span class="st">&quot;power&quot;</span>,</span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a>  <span class="st">&quot;power_mcse&quot;</span>,</span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a>  <span class="st">&quot;power_mc_lower&quot;</span>,</span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a>  <span class="st">&quot;power_mc_upper&quot;</span>,</span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a>  <span class="st">&quot;stop_success&quot;</span>,</span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a>  <span class="st">&quot;stop_futility&quot;</span>,</span>
+<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a>  <span class="st">&quot;mean_N&quot;</span>,</span>
+<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a>  <span class="st">&quot;mean_N_mcse&quot;</span></span>
+<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a>)]</span>
+<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a></span>
+<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb10-42"><a href="#cb10-42" tabindex="-1"></a>  oc_display,</span>
+<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(</span>
+<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a>    <span class="st">&quot;Scenario&quot;</span>, <span class="st">&quot;Trials used&quot;</span>, <span class="st">&quot;Power&quot;</span>, <span class="st">&quot;Power MCSE&quot;</span>,</span>
+<span id="cb10-46"><a href="#cb10-46" tabindex="-1"></a>    <span class="st">&quot;Power lower 95% MC&quot;</span>, <span class="st">&quot;Power upper 95% MC&quot;</span>, <span class="st">&quot;Expected success stop&quot;</span>,</span>
+<span id="cb10-47"><a href="#cb10-47" tabindex="-1"></a>    <span class="st">&quot;Futility stop&quot;</span>, <span class="st">&quot;Mean N&quot;</span>, <span class="st">&quot;Mean N MCSE&quot;</span></span>
+<span id="cb10-48"><a href="#cb10-48" tabindex="-1"></a>  )</span>
+<span id="cb10-49"><a href="#cb10-49" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="12%" />
+<col width="8%" />
+<col width="4%" />
+<col width="7%" />
+<col width="13%" />
+<col width="13%" />
+<col width="15%" />
+<col width="10%" />
+<col width="5%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Scenario</th>
+<th align="right">Trials used</th>
+<th align="right">Power</th>
+<th align="right">Power MCSE</th>
+<th align="right">Power lower 95% MC</th>
+<th align="right">Power upper 95% MC</th>
+<th align="right">Expected success stop</th>
+<th align="right">Futility stop</th>
+<th align="right">Mean N</th>
+<th align="right">Mean N MCSE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Null: HR = 1.00</td>
+<td align="right">20</td>
+<td align="right">0.05</td>
+<td align="right">0.049</td>
+<td align="right">0.009</td>
+<td align="right">0.236</td>
+<td align="right">0.05</td>
+<td align="right">0.60</td>
+<td align="right">750</td>
+<td align="right">51.555</td>
+</tr>
+<tr class="even">
+<td align="left">Target: HR = 0.70</td>
+<td align="right">20</td>
+<td align="right">0.75</td>
+<td align="right">0.097</td>
+<td align="right">0.531</td>
+<td align="right">0.888</td>
+<td align="right">0.55</td>
+<td align="right">0.05</td>
+<td align="right">780</td>
+<td align="right">47.351</td>
+</tr>
+</tbody>
+</table>
+<p>For the corresponding sponsor scenario - 35% control event
+probability at one year, hazard ratio 0.70, peak accrual 26/month, and
+10% dropout - the ADR reported power 0.836 and mean sample size 833.
+Under the null with the same control profile it reported type I error
+0.021 and mean sample size 748. Those results came from the sponsor’s
+modified FACTS analysis, 1,000 alternative trials, 10,000 null trials,
+and 1,000 predictive iterations per simulated interim. They are
+reference targets, not values that a 20-trial vignette simulation can
+meaningfully validate.</p>
+<p>The journal article summarized the same planning exercise more
+broadly as approximately 80% power for hazard ratio 0.70, a three-year
+control event rate of about 43%, 26 patients/month, and 10% dropout. The
+small package results may differ because of Monte Carlo error and the
+structural approximations described next.</p>
+</div>
+<div id="differences-from-the-sponsors-design" class="section level2">
+<h2>Differences from the sponsor’s design</h2>
+<p>Several distinctions are consequential:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Predictive model.</strong> The ADR uses common control
+baseline hazards and one shared treatment log hazard ratio with a weakly
+informative normal prior. <code>goldilocks</code> estimates independent
+piecewise hazards for the two arms. Arm-specific Gamma priors can
+represent the reported control-hazard prior, but the joint sponsor
+parameterization and its shared treatment-effect prior cannot.</li>
+<li><strong>Look timing.</strong> Package looks occur when an enrollment
+count is reached. It cannot additionally require 300 patients with nine
+months since randomization at the first look, nor schedule futility
+updates four and eight months after accrual ends.</li>
+<li><strong>Follow-up horizon.</strong> <code>end_of_study</code> is a
+per-subject administrative horizon. The published trial kept all
+randomized patients under follow-up until the common final visit 16
+months after the last randomization, so earlier participants could
+contribute more than 16 months.</li>
+<li><strong>Accrual and randomization.</strong> The stepwise accrual
+approximation replaces a linear six-month ramp. The package also cannot
+reproduce geographic and clinical stratification or randomly varying
+block sizes 3, 6, and 9.</li>
+<li><strong>Monte Carlo diagnostics.</strong> The public ADR defines
+each predictive probability as the proportion of imputed datasets in
+which the final test succeeds, and compares that point estimate with
+0.95 or 0.01. <code>goldilocks</code> uses the same strict
+point-estimate comparisons. With 300 imputations, for example,
+expected-success stopping requires at least 286 successes and a futility
+proportion below 0.01 permits zero, one, or two successes. The package
+additionally reports Monte Carlo standard errors and exact one-sided
+bounds in the decision trace, but these are diagnostic only.</li>
+</ol>
+<p>These differences concern the statistical and operational scope of
+the two designs. They are why the vignette compares broad behavior and
+operating characteristics without claiming exact calibration.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Broglio KR, Connor JT, Berry SM. Not too big, not too small: a
+Goldilocks approach to sample size selection. <em>Journal of
+Biopharmaceutical Statistics</em>. 2014;24(3):685-705. <a
+href="doi:10.1080/10543406.2014.888569"
+class="uri">doi:10.1080/10543406.2014.888569</a>.</p>
+<p>ClinicalTrials.gov. Autonomic Regulation Therapy to Enhance
+Myocardial Function and Reduce Progression of Heart Failure With Reduced
+Ejection Fraction. <a
+href="https://clinicaltrials.gov/study/NCT03425422">NCT03425422</a>.</p>
+<p>Konstam MA, Udelson JE, Butler J, et al. Impact of autonomic
+regulation therapy in patients with heart failure: ANTHEM-HFrEF pivotal
+study design. <em>Circulation: Heart Failure</em>. 2019;12:e005879. <a
+href="https://doi.org/10.1161/CIRCHEARTFAILURE.119.005879">doi:10.1161/CIRCHEARTFAILURE.119.005879</a>.</p>
+<p>Konstam MA, Udelson JE, Mann DL, et al. Vagal nerve stimulation in
+patients with heart failure and reduced ejection fraction: the
+ANTHEM-HFrEF trial. <em>Journal of the American College of
+Cardiology</em>. 2026;87(25). <a
+href="https://doi.org/10.1016/j.jacc.2026.03.040">doi:10.1016/j.jacc.2026.03.040</a>.</p>
+<p>LivaNova USA. <em>ANTHEM-HFrEF Clinical Investigation Plan</em>,
+version 9.2, 1 November 2021. <a
+href="https://ars.els-cdn.com/content/image/1-s2.0-S0735109726058365-mmc2.pdf">Public
+JACC supplement</a>.</p>
+<p>LivaNova USA. <em>ANTHEM-HFrEF Statistical Analysis Plan</em>,
+version 2.0, 8 February 2022. <a
+href="https://ars.els-cdn.com/content/image/1-s2.0-S0735109726058365-mmc3.pdf">Public
+JACC supplement</a>.</p>
+<p>Berry Consultants. <em>ANTHEM-HFrEF Pivotal Trial Adaptive Design
+Report</em>, version 3.2, 13 October 2021. <a
+href="https://ars.els-cdn.com/content/image/1-s2.0-S0735109726058365-mmc4.pdf">Public
+JACC supplement</a>.</p>
+<p>LivaNova USA. <em>Statistical Analysis Plan Amendment - ANTHEM-HFrEF
+Pivotal Study</em>, version 1.0, 16 May 2023. <a
+href="https://ars.els-cdn.com/content/image/1-s2.0-S0735109726058365-mmc5.pdf">Public
+JACC supplement</a>.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

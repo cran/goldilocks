@@ -1,9 +1,8 @@
 ## ----include = FALSE----------------------------------------------------------
+source("shared-vignette-resources.R")
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache = TRUE,
-  cache.path = "advent-cache/",
   fig.width = 7,
   fig.height = 4
 )
@@ -164,14 +163,11 @@ safety_hazard_per_day <- c(0.011137363, 1.53540e-5)
 event_free_at_interval_end <- function(hazard, interval_end) {
   vapply(seq_along(hazard), function(j) {
     cutpoints <- if (j == 1L) NULL else interval_end[seq_len(j - 1L)]
-    post <- array(hazard[seq_len(j)], dim = c(1L, j, 1L))
-
-    1 - goldilocks:::haz_to_prop(
-      post = post,
+    1 - ppwe(
+      hazard = matrix(hazard[seq_len(j)], nrow = 1L),
       cutpoints = cutpoints,
-      end_of_study = interval_end[j],
-      single_arm = TRUE
-    )$p_treatment
+      end_of_study = interval_end[j]
+    )
   }, numeric(1))
 }
 
@@ -259,6 +255,7 @@ enrollment_rate_per_day <- enrollment_rate_per_month / days_per_month
 enrollment_rate_change_day <-
   enrollment_rate_change_month * days_per_month
 
+# Independent exponential dropout CDFs at the 360-day per-subject horizon.
 effectiveness_prop_loss <- 0.075
 safety_prop_loss <- 0.05
 
@@ -300,7 +297,7 @@ advent_effectiveness <- survival_adapt(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = effectiveness_prop_loss,
   alternative = "less",
   h0 = 0.15,
@@ -333,7 +330,7 @@ advent_safety <- survival_adapt(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = safety_prop_loss,
   alternative = "less",
   h0 = 0.08,
@@ -360,7 +357,7 @@ advent_common <- list(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   alternative = "less",
   Fn = Fn,
   Sn = Sn,
@@ -413,14 +410,30 @@ eff_null_boundary <- do.call(sim_trials, c(
 ))
 
 oc_small <- summarise_sims(list(
-  "target: equal 35% failure" = eff_target$sims,
-  "margin: PFA failure 50%" = eff_null_boundary$sims
+  "target: equal 35% failure" = eff_target,
+  "margin: PFA failure 50%" = eff_null_boundary
 ))
 
-knitr::kable(oc_small, digits = 3)
+knitr::kable(
+  oc_small[c(
+    "scenario", "n_used", "n_failed", "power", "stop_success",
+    "stop_futility", "stop_max_N", "mean_N"
+  )],
+  digits = 3,
+  col.names = c(
+    "Scenario", "Trials used", "Failed runs", "Success probability",
+    "Expected success stop", "Futility stop", "Maximum N", "Mean N"
+  )
+)
 
 ## ----advent-oc-plot, fig.width=9, fig.height=4.5------------------------------
-oc_small$true_pfa_event_probability <- c(0.35, 0.50)
+effect_by_scenario <- c(
+  "target: equal 35% failure" = 0.35,
+  "margin: PFA failure 50%" = 0.50
+)
+oc_small$true_pfa_event_probability <- unname(
+  effect_by_scenario[oc_small$scenario]
+)
 plot_sim_ocs(
   oc_small,
   effect = "true_pfa_event_probability",
@@ -493,10 +506,10 @@ plot_sim_decisions(eff_target)
 # ))
 # 
 # summarise_sims(list(
-#   "effectiveness target" = eff_target_full$sims,
-#   "effectiveness margin" = eff_margin_full$sims,
-#   "safety target" = safety_target_full$sims,
-#   "safety margin" = safety_margin_full$sims
+#   "effectiveness target" = eff_target_full,
+#   "effectiveness margin" = eff_margin_full,
+#   "safety target" = safety_target_full,
+#   "safety margin" = safety_margin_full
 # ))
 
 ## ----sap-reference-benchmarks, echo=FALSE-------------------------------------

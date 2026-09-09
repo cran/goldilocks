@@ -4,11 +4,16 @@
 #'   treatment-effect scenarios. The first panel shows final success and
 #'   stopping probabilities. The second panel shows mean enrolled sample size.
 #'
-#' @param x A data frame returned by [summarise_sims()], with one row per
-#'   simulation scenario.
-#' @param effect Numeric treatment-effect values corresponding to the rows of
-#'   `x`, or a single character string naming a numeric column in `x`.
-#' @param xlab Character label for the treatment-effect axis.
+#' @param x A required data frame returned by [summarise_sims()], with one row
+#'   per simulation scenario and columns `power`, `stop_success`,
+#'   `stop_futility`, `stop_max_N`, and `mean_N`. When present,
+#'   `stop_immediate_success` is plotted separately from `stop_success`, which
+#'   retains its historical expected-success meaning.
+#' @param effect A required numeric vector containing one finite
+#'   treatment-effect value per row of `x`, or a single character string naming
+#'   such a numeric column in `x`.
+#' @param xlab A single character string for the treatment-effect axis label.
+#'   The default is `"True treatment effect"`.
 #'
 #' @return `x`, invisibly.
 #'
@@ -32,8 +37,11 @@
 #'
 #' @export
 plot_sim_ocs <- function(x, effect, xlab = "True treatment effect") {
+  has_immediate_success <- is.data.frame(x) &&
+    "stop_immediate_success" %in% names(x)
   probability_columns <- c(
     "power",
+    if (has_immediate_success) "stop_immediate_success" else character(),
     "stop_success",
     "stop_futility",
     "stop_max_N"
@@ -90,14 +98,33 @@ plot_sim_ocs <- function(x, effect, xlab = "True treatment effect") {
   mean_N <- x$mean_N[scenario_order]
 
   probability_labels <- c(
-    "Final success",
-    "Stop for expected success",
+    "Trial success",
+    if (has_immediate_success) "Immediate success" else character(),
+    "Stop accrual for expected success",
     "Stop for futility",
     "Maximum sample size"
   )
-  colours <- c("#0072B2", "#009E73", "#D55E00", "#999999")
-  point_characters <- c(16, 17, 15, 18)
-  line_types <- c(1, 2, 2, 3)
+  colours <- c(
+    "#0072B2",
+    if (has_immediate_success) "#CC79A7" else character(),
+    "#009E73",
+    "#D55E00",
+    "#999999"
+  )
+  point_characters <- c(
+    16,
+    if (has_immediate_success) 8 else integer(),
+    17,
+    15,
+    18
+  )
+  line_types <- c(
+    1,
+    if (has_immediate_success) 3 else integer(),
+    2,
+    2,
+    3
+  )
 
   old_par <- graphics::par(no.readonly = TRUE)
   on.exit(graphics::par(old_par), add = TRUE)

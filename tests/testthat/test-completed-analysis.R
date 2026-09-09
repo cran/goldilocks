@@ -22,6 +22,56 @@ test_that("analyse_data works with method = 'logrank'", {
   expect_true(is.na(res$effect))
 })
 
+test_that("log-rank analysis rejects a nonzero h0 instead of ignoring it", {
+  data <- data.frame(
+    time = c(1, 2, 3, 4),
+    event = c(1, 1, 1, 1),
+    treatment = c(0, 0, 1, 1)
+  )
+
+  expect_error(
+    analyse_data(
+      data = data,
+      cutpoints = NULL,
+      end_of_study = 4,
+      prior_surv = c(0.1, 0.1),
+      N_mcmc = 10,
+      single_arm = FALSE,
+      method = "logrank",
+      alternative = "two.sided",
+      h0 = 0.1
+    ),
+    "'h0' must be 0 for log-rank analyses.*equal survival distributions"
+  )
+})
+
+test_that("binary analyses reject missing and non-binary event indicators", {
+  base_data <- data.frame(
+    time = rep(36, 4),
+    event = c(0, 1, 0, 1),
+    treatment = c(0, 0, 1, 1)
+  )
+  args <- list(
+    cutpoints = NULL,
+    end_of_study = 36,
+    prior_surv = c(0.1, 0.1),
+    N_mcmc = 10,
+    single_arm = FALSE,
+    method = "riskdiff-wald",
+    alternative = "two.sided",
+    h0 = 0
+  )
+
+  for (bad_event in list(c(0, 1, NA, 1), c(0, 1, 2, 1))) {
+    data <- base_data
+    data$event <- bad_event
+    expect_error(
+      do.call(analyse_data, c(list(data = data), args)),
+      "requires binary event outcomes.*'data\\$event'.*only 0 and 1"
+    )
+  }
+})
+
 test_that("analyse_data works with method = 'cox'", {
   set.seed(3729)
   data <- data.frame(
@@ -90,9 +140,15 @@ test_that("analyse_data errors clearly for non-estimable Cox tests", {
     ),
     "Cox analysis is non-estimable"
   )
+  for (engine in c("auto", "public")) {
+    expect_error(
+      cox_wald_test_checked(data, engine = engine),
+      "Cox analysis is non-estimable"
+    )
+  }
 })
 
-test_that("cox_wald_test matches coxph treatment estimate and standard error", {
+test_that("guarded Cox engines match coxph estimates and standard errors", {
   set.seed(4291)
   data <- data.frame(
     time = c(rexp(50, rate = 0.06), rexp(50, rate = 0.04)),
@@ -100,11 +156,151 @@ test_that("cox_wald_test matches coxph treatment estimate and standard error", {
     treatment = rep(0:1, each = 50)
   )
 
-  fast_fit <- cox_wald_test(data)
+  automatic_fit <- cox_wald_test(data)
+  public_fit <- cox_wald_test(data, engine = "public")
   survival_fit <- coxph(Surv(time, event) ~ treatment, data = data)
 
-  expect_equal(fast_fit$estimate, unname(survival_fit$coefficients[1]))
-  expect_equal(fast_fit$std_error, sqrt(unname(survival_fit$var[1, 1])))
+  expect_equal(automatic_fit$estimate, unname(survival_fit$coefficients[1]))
+  expect_equal(
+    automatic_fit$std_error,
+    sqrt(unname(survival_fit$var[1, 1]))
+  )
+  expect_equal(public_fit, automatic_fit)
+
+  compatibility <- coxph_fit_compatibility(refresh = TRUE)
+  if (compatibility$compatible) {
+    expect_equal(
+      cox_wald_test(data, engine = "fast"),
+      public_fit
+    )
+  }
+})
+
+test_that("cox_wald_test matches public coxph for tied event times", {
+  data <- data.frame(
+    time = c(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6),
+    event = c(1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1),
+    treatment = rep(0:1, 6)
+  )
+
+  fit <- cox_wald_test(data)
+  reference <- survival::coxph(
+    survival::Surv(time, event) ~ treatment,
+    data = data,
+    ties = "efron",
+    singular.ok = FALSE,
+    model = FALSE,
+    x = FALSE,
+    y = FALSE
+  )
+
+  expect_equal(fit$estimate, unname(stats::coef(reference)["treatment"]))
+  expect_equal(
+    fit$std_error,
+    sqrt(unname(stats::vcov(reference)["treatment", "treatment"]))
+  )
+})
+
+test_that("Cox compatibility resolver records and validates survival", {
+  compatibility <- coxph_fit_compatibility(refresh = TRUE)
+
+  expect_named(
+    compatibility,
+    c("compatible", "fitter", "version", "reason")
+  )
+  expect_type(compatibility$compatible, "logical")
+  expect_length(compatibility$compatible, 1L)
+  expect_match(compatibility$version, "^[0-9]+\\.[0-9]+")
+  expect_type(compatibility$reason, "character")
+  if (compatibility$compatible) {
+    expect_type(compatibility$fitter, "closure")
+  } else {
+    expect_null(compatibility$fitter)
+  }
+})
+
+test_that("Cox auto engine falls back when the fast path is incompatible", {
+  set.seed(7701)
+  data <- data.frame(
+    time = rexp(100, rate = 0.04),
+    event = rbinom(100, size = 1, prob = 0.65),
+    treatment = rep(0:1, each = 50)
+  )
+  unavailable <- list(
+    compatible = FALSE,
+    fitter = NULL,
+    version = "test",
+    reason = "simulated incompatible signature"
+  )
+
+  expect_equal(
+    cox_wald_test(data, compatibility = unavailable),
+    cox_wald_test(data, engine = "public")
+  )
+  expect_error(
+    cox_wald_test(
+      data,
+      engine = "fast",
+      compatibility = unavailable
+    ),
+    "fast path is unavailable.*simulated incompatible signature"
+  )
+})
+
+test_that("Cox auto engine rejects malformed fast-path results safely", {
+  set.seed(7702)
+  data <- data.frame(
+    time = rexp(100, rate = 0.04),
+    event = rbinom(100, size = 1, prob = 0.65),
+    treatment = rep(0:1, each = 50)
+  )
+  malformed <- list(
+    compatible = TRUE,
+    fitter = function(...) {
+      list(coefficients = 0, var = matrix(1))
+    },
+    version = "test",
+    reason = "simulated malformed result"
+  )
+
+  expect_equal(
+    cox_wald_test(data, compatibility = malformed),
+    cox_wald_test(data, engine = "public")
+  )
+  expect_error(
+    cox_wald_test(
+      data,
+      engine = "fast",
+      compatibility = malformed
+    ),
+    "incompatible result structure"
+  )
+})
+
+test_that("Cox analysis defines singular and convergence-failure behavior", {
+  singular_data <- data.frame(
+    time = seq_len(10),
+    event = rep(1, 10),
+    treatment = rep(0, 10)
+  )
+  for (engine in c("auto", "public")) {
+    expect_error(
+      cox_wald_test_checked(singular_data, engine = engine),
+      "Cox analysis is non-estimable"
+    )
+  }
+
+  separated_data <- data.frame(
+    time = seq_len(20),
+    event = c(rep(1, 10), rep(0, 10)),
+    treatment = rep(0:1, each = 10)
+  )
+  for (engine in c("auto", "public")) {
+    expect_error(
+      cox_wald_test_checked(separated_data, engine = engine),
+      "Cox analysis is non-estimable:.*reported:.*coefficient may be infinite"
+    )
+  }
 })
 
 test_that("analyse_data works with method = 'bayes-surv' (two-arm)", {
@@ -215,6 +411,153 @@ test_that("Bayesian survival sufficient-statistics analysis is equivalent", {
   }
 })
 
+test_that("prepared Bayesian survival analysis matches general analysis", {
+  data <- data.frame(
+    time = c(3, 8, 15, 4, 10, 18),
+    event = c(1, 0, 1, 0, 1, 1),
+    treatment = c(0, 0, 0, 1, 1, 1)
+  )
+  cutpoints <- c(5, 12)
+  data_summ <- posterior_sufficient_stats(data, cutpoints, FALSE)
+  prior <- normalize_gamma_prior(
+    list(
+      control = c(0.5, 0.25),
+      treatment = c(1, 0.5)
+    ),
+    n_intervals = 3,
+    single_arm = FALSE,
+    name = "prior_surv"
+  )
+  args <- list(
+    data_summ = data_summ,
+    cutpoints = cutpoints,
+    end_of_study = 24,
+    prior_surv = prior,
+    N_mcmc = 100,
+    single_arm = FALSE,
+    alternative = "less",
+    h0 = 0
+  )
+
+  set.seed(8247)
+  checked <- do.call(analyse_bayes_surv_sufficient_stats, args)
+  checked_seed <- .Random.seed
+  set.seed(8247)
+  prepared <- do.call(analyse_prepared_bayes_surv, args)
+  prepared_seed <- .Random.seed
+
+  expect_identical(prepared, checked)
+  expect_identical(
+    attr(prepared, "mc_counts", exact = TRUE),
+    attr(checked, "mc_counts", exact = TRUE)
+  )
+  expect_identical(prepared_seed, checked_seed)
+})
+
+test_that("prepared Bayesian survival effects match the general conversion", {
+  cases <- list(
+    list(
+      name = "two-arm, one draw, one interval",
+      draws = 1L,
+      cutpoints = NULL,
+      end_of_study = 24,
+      single_arm = FALSE
+    ),
+    list(
+      name = "single-arm, one draw, piecewise",
+      draws = 1L,
+      cutpoints = c(5, 12),
+      end_of_study = 24,
+      single_arm = TRUE
+    ),
+    list(
+      name = "two-arm, multiple draws, piecewise",
+      draws = 10L,
+      cutpoints = c(5, 12),
+      end_of_study = 24,
+      single_arm = FALSE
+    ),
+    list(
+      name = "single-arm, multiple draws, one interval",
+      draws = 10L,
+      cutpoints = NULL,
+      end_of_study = 24,
+      single_arm = TRUE
+    )
+  )
+
+  for (case in cases) {
+    n_intervals <- length(case$cutpoints) + 1L
+    post_lambda <- array(
+      seq_len(case$draws * n_intervals * 2L) / 100,
+      dim = c(case$draws, n_intervals, 2L)
+    )
+    if (case$single_arm) {
+      post_lambda[,, 2L] <- NA_real_
+    }
+    interval_widths <- endpoint_interval_widths(
+      case$cutpoints,
+      case$end_of_study
+    )
+
+    expected <- haz_to_prop(
+      post = post_lambda,
+      cutpoints = case$cutpoints,
+      end_of_study = case$end_of_study,
+      single_arm = case$single_arm
+    )$effect
+    actual <- bayes_surv_effect_draws(
+      post_lambda = post_lambda,
+      interval_widths = interval_widths,
+      single_arm = case$single_arm
+    )
+
+    expect_identical(actual, expected, info = case$name)
+  }
+})
+
+test_that("prepared Bayesian survival effects reject incompatible inputs", {
+  expect_error(
+    bayes_surv_effect_draws(
+      post_lambda = matrix(0.1, nrow = 2, ncol = 2),
+      interval_widths = c(6, 6),
+      single_arm = FALSE
+    ),
+    "incompatible posterior hazards and interval widths"
+  )
+
+  data <- data.frame(
+    time = c(3, 8, 15, 4, 10, 18),
+    event = c(1, 0, 1, 0, 1, 1),
+    treatment = c(0, 0, 0, 1, 1, 1)
+  )
+  data_summ <- posterior_sufficient_stats(data, c(5, 12), FALSE)
+  prior <- normalize_gamma_prior(
+    c(0.5, 0.25),
+    n_intervals = 3,
+    single_arm = FALSE,
+    name = "prior_surv"
+  )
+
+  set.seed(8248)
+  seed_before <- .Random.seed
+  expect_error(
+    analyse_prepared_bayes_surv(
+      data_summ = data_summ,
+      cutpoints = c(5, 12),
+      end_of_study = 24,
+      prior_surv = prior,
+      N_mcmc = 10,
+      single_arm = FALSE,
+      alternative = "less",
+      h0 = 0,
+      interval_widths = c(5, -1, 20)
+    ),
+    "invalid interval widths"
+  )
+  expect_identical(.Random.seed, seed_before)
+})
+
 test_that("analyse_data works with method = 'bayes-surv' and alternative = 'less'", {
   set.seed(5091)
   data <- data.frame(
@@ -249,7 +592,7 @@ test_that("analyse_data works with method = 'bayes-surv' and alternative = 'less
   expect_equal(res_greater$success + res_less$success, 1, tolerance = 0.05)
 })
 
-test_that("analyse_data works with method = 'riskdiff'", {
+test_that("analyse_data works with method = 'riskdiff-wald'", {
   event <- c(rep(1, 10), rep(0, 40), rep(1, 20), rep(0, 30))
   data <- data.frame(
     time = rep(36, 100),
@@ -263,7 +606,7 @@ test_that("analyse_data works with method = 'riskdiff'", {
     prior_surv = c(0.1, 0.1),
     N_mcmc = 10,
     single_arm = FALSE,
-    method = "riskdiff",
+    method = "riskdiff-wald",
     alternative = "greater",
     h0 = 0
   )
@@ -296,7 +639,7 @@ test_that("analyse_data risk-difference alternatives preserve direction", {
     prior_surv = c(0.1, 0.1),
     N_mcmc = 10,
     single_arm = FALSE,
-    method = "riskdiff",
+    method = "riskdiff-wald",
     h0 = 0.1
   )
 
@@ -308,7 +651,7 @@ test_that("analyse_data risk-difference alternatives preserve direction", {
   expect_gt(greater$success, 0.5)
 })
 
-test_that("analyse_data method = 'riskdiff' rejects incomplete censored outcomes", {
+test_that("riskdiff-wald rejects incomplete censored outcomes", {
   data <- data.frame(
     time = c(5, 36, 7, 36),
     event = c(0, 0, 1, 1),
@@ -323,7 +666,7 @@ test_that("analyse_data method = 'riskdiff' rejects incomplete censored outcomes
       prior_surv = c(0.1, 0.1),
       N_mcmc = 10,
       single_arm = FALSE,
-      method = "riskdiff",
+      method = "riskdiff-wald",
       alternative = "two.sided",
       h0 = 0
     ),
@@ -352,12 +695,38 @@ test_that("analyse_data works with method = 'bayes-bin' and Monte Carlo", {
     prior_bin = c(1, 1),
     bin_method = "mc"
   )
+  reference <- analyse_data(
+    data = data,
+    cutpoints = NULL,
+    end_of_study = 36,
+    prior_surv = c(0.1, 0.1),
+    N_mcmc = 1,
+    single_arm = FALSE,
+    method = "bayes-bin",
+    alternative = "greater",
+    h0 = 0,
+    prior_bin = c(1, 1),
+    bin_method = "quadrature"
+  )
+  treatment_variance <- (31 * 21) / (52^2 * 53)
+  control_variance <- (11 * 41) / (52^2 * 53)
 
   expect_type(res, "list")
   expect_named(res, c("success", "effect"))
   expect_true(res$success >= 0 && res$success <= 1)
   expect_length(res$effect, 1)
-  expect_equal(res$effect, 20 / 52, tolerance = 0.02)
+  expect_mc_close(
+    res$effect,
+    20 / 52,
+    sqrt((treatment_variance + control_variance) / 5000),
+    "Bayesian binomial posterior mean risk difference"
+  )
+  expect_mc_close(
+    res$success,
+    reference$success,
+    sqrt(reference$success * (1 - reference$success) / 5000),
+    "Bayesian binomial posterior probability"
+  )
   expect_true(res$success > 0.9)
 })
 
@@ -417,7 +786,16 @@ test_that("analyse_data method = 'bayes-bin' engines agree on stable data", {
     c(args, bin_method = "quadrature")
   )
 
-  expect_equal(res_mc$success, res_quadrature$success, tolerance = 0.01)
+  expect_mc_close(
+    res_mc$success,
+    res_quadrature$success,
+    sqrt(
+      res_quadrature$success *
+        (1 - res_quadrature$success) /
+        args$N_mcmc
+    ),
+    "Bayesian binomial Monte Carlo posterior probability"
+  )
   expect_equal(res_normal$success, res_quadrature$success, tolerance = 0.02)
 })
 

@@ -1,13 +1,18 @@
 ---
-title: "Package architecture"
-output: rmarkdown::html_vignette
+title: "Statistical workflow and reproducibility"
+output:
+  rmarkdown::html_vignette:
+    self_contained: false
+    lib_dir: libs
+    css: libs/vignette.css
 vignette: >
-  %\VignetteIndexEntry{Package architecture}
+  %\VignetteIndexEntry{Statistical workflow and reproducibility}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
+source("shared-vignette-resources.R")
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -16,121 +21,295 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-The `goldilocks` package implements the Goldilocks adaptive trial design described in Broglio et al. (2014). This vignette provides a visual overview of how the package functions are interconnected.
+This vignette describes how the statistical components of a `goldilocks`
+design fit together. Its purpose is to support protocol development,
+simulation reports, and independent review: the assumptions used to generate
+trial data, the models used for interim prediction, the decision thresholds,
+and the final analysis should be distinguishable and prespecified.
 
-## Function dependency diagram
+The package supports three related analyses:
 
-The diagram below shows the call graph from the top-level simulation function (`sim_trials()`) down through the core engine (`survival_adapt()`) and into the internal analysis pipeline.
+1.  `sim_trials()` simulates repeated trials to estimate operating
+    characteristics;
+2.  `survival_adapt()` simulates and evaluates one adaptive trial; and
+3.  `evaluate_interim()` applies the prespecified interim rule to an observed
+    trial data cut.
 
-**Exported functions** are shown in blue. **Internal functions** are shown in grey.
+The same posterior-predictive calculation and ordered stopping rule are used
+for simulated and observed interim analyses.
 
-```{r, echo = FALSE, fig.width = 8, fig.height = 8, fig.alt = "Diagram showing the function call dependencies in the goldilocks package."}
+## From assumptions to operating characteristics
+
+```{r, echo = FALSE, fig.width = 10, fig.height = 6.2, fig.alt = "Flowchart linking trial assumptions, simulated or observed interim data, posterior prediction, adaptive decisions, final analysis, and operating characteristics."}
 DiagrammeR::grViz("
-digraph goldilocks {
+digraph statistical_workflow {
+  graph [rankdir = TB, fontsize = 12, nodesep = 0.32, ranksep = 0.48]
+  node [shape = box, style = 'filled,rounded', fontname = Helvetica,
+        fontsize = 10, fillcolor = '#f5f5f5', color = '#777777']
+  edge [fontname = Helvetica, fontsize = 9, color = '#666666']
 
-  graph [rankdir = TB, fontsize = 12, nodesep = 0.4, ranksep = 0.6]
+  assumptions [label = 'Prespecified assumptions\nendpoint, accrual, treatment effect, missingness',
+               fillcolor = '#dae8fc', color = '#6c8ebf']
+  simulated [label = 'Simulated trial data']
+  observed [label = 'Observed interim data cut']
+  posterior [label = 'Posterior distribution of event-time hazards']
+  current [label = 'Predict success after follow-up\nof currently enrolled participants']
+  maximum [label = 'Predict success after enrollment\nto the maximum sample size']
+  decision [label = 'Apply Qn, Sn, and Fn\nimmediate success / expected success / futility / continue',
+            fillcolor = '#fff2cc', color = '#d6b656']
+  final [label = 'Prespecified final analysis\nwhen required']
+  repeated [label = 'Repeat under null and alternative scenarios']
+  oc [label = 'Operating characteristics\ntype I error, power, stopping, sample size, duration',
+      fillcolor = '#d5e8d4', color = '#82b366']
 
-  node [shape = box, style = 'filled, rounded', fontname = Helvetica, fontsize = 10]
-
-  # Exported functions (blue)
-  sim_trials       [label = 'sim_trials()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  survival_adapt   [label = 'survival_adapt()',   fillcolor = '#dae8fc', color = '#6c8ebf']
-  summarise_sims   [label = 'summarise_sims()',   fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_enrollment  [label = 'plot_enrollment()',  fillcolor = '#dae8fc', color = '#6c8ebf']
-  summarise_trial_trace [label = 'summarise_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_trial_trace [label = 'plot_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_stopping [label = 'plot_sim_stopping()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_ocs      [label = 'plot_sim_ocs()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_decisions [label = 'plot_sim_decisions()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  sim_comp_data    [label = 'sim_comp_data()',    fillcolor = '#dae8fc', color = '#6c8ebf']
-  enrollment       [label = 'enrollment()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  randomization    [label = 'randomization()',    fillcolor = '#dae8fc', color = '#6c8ebf']
-  pwe_sim          [label = 'pwe_sim()',          fillcolor = '#dae8fc', color = '#6c8ebf']
-  pwe_impute       [label = 'pwe_impute()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  ppwe             [label = 'ppwe()',             fillcolor = '#dae8fc', color = '#6c8ebf']
-  prop_to_haz      [label = 'prop_to_haz()',      fillcolor = '#dae8fc', color = '#6c8ebf']
-
-  # Internal functions (grey)
-  test_stop_success [label = 'test_stop_success()', fillcolor = '#f5f5f5', color = '#999999']
-  test_final        [label = 'test_final()',         fillcolor = '#f5f5f5', color = '#999999']
-  analyse_data      [label = 'analyse_data()',       fillcolor = '#f5f5f5', color = '#999999']
-  bayes_binomial_test [label = 'bayes_binomial_test()', fillcolor = '#f5f5f5', color = '#999999']
-  impute_data       [label = 'impute_data()',        fillcolor = '#f5f5f5', color = '#999999']
-  posterior          [label = 'posterior()',           fillcolor = '#f5f5f5', color = '#999999']
-  haz_to_prop       [label = 'haz_to_prop()',        fillcolor = '#f5f5f5', color = '#999999']
-  logrank_test      [label = 'logrank_test()',        fillcolor = '#f5f5f5', color = '#999999']
-
-  # Edges
-  sim_trials      -> survival_adapt
-  sim_trials      -> summarise_sims  [style = dashed, label = 'output list']
-  sim_trials      -> plot_sim_stopping [style = dashed, label = 'simulation output']
-  sim_trials      -> plot_sim_decisions [style = dashed, label = 'simulation traces']
-  sim_trials      -> plot_enrollment [style = dashed, label = 'stored design']
-  summarise_sims  -> plot_sim_ocs [style = dashed, label = 'scenario summaries']
-
-  survival_adapt  -> sim_comp_data
-  survival_adapt  -> posterior
-  survival_adapt  -> test_stop_success
-  survival_adapt  -> test_final
-  survival_adapt  -> summarise_trial_trace [style = dashed, label = 'optional trace']
-  survival_adapt  -> plot_trial_trace [style = dashed, label = 'optional trace']
-  survival_adapt  -> plot_enrollment [style = dashed, label = 'stored design']
-
-  sim_comp_data   -> enrollment
-  sim_comp_data   -> randomization
-  sim_comp_data   -> pwe_sim
-
-  test_stop_success -> impute_data
-  test_stop_success -> analyse_data
-
-  test_final      -> posterior
-  test_final      -> impute_data
-  test_final      -> analyse_data
-
-  analyse_data    -> posterior
-  analyse_data    -> haz_to_prop
-  analyse_data    -> bayes_binomial_test
-  analyse_data    -> logrank_test
-
-  haz_to_prop     -> ppwe
-  prop_to_haz     -> sim_comp_data [style = dashed, label = 'hazard inputs']
-
-  impute_data     -> pwe_impute
-  impute_data     -> pwe_sim
+  assumptions -> simulated
+  assumptions -> posterior [style = dashed, label = 'analysis priors']
+  simulated -> posterior [label = 'interim data']
+  observed -> posterior
+  posterior -> current
+  posterior -> maximum
+  current -> decision
+  maximum -> decision
+  decision -> final [label = 'expected success or maximum N']
+  decision -> repeated [label = 'terminal trial result']
+  final -> repeated
+  repeated -> oc
 }
 ")
 ```
 
-## Function roles
+### Data-generating assumptions
 
-The functions fall into three layers:
+For simulation, `sim_comp_data()` generates enrollment times, randomized
+treatment assignments, event times, and loss to follow-up. The first
+participant enrolls at time zero; subsequent enrollment follows a
+piecewise-constant Poisson process. Event times follow arm-specific
+piecewise-exponential distributions. Dropout times are exponential and
+independent of event times and enrollment within each arm, with rate
+`-log1p(-prop_loss) / end_of_study`. Observed follow-up ends at the earliest
+event, dropout, or per-subject administrative horizon. `prop_loss` specifies
+the dropout CDF at that horizon, not the fraction actually censored by dropout;
+events can occur first, and dropout counts vary across trials. The technical
+methods vignette gives the full censoring model and its implications for
+binary analyses.
 
-### Simulation layer
+The event-time distribution used to simulate trials need not equal the model
+used for interim prediction. `generation_cutpoints` defines the data-generating
+hazard intervals, whereas `cutpoints` defines the intervals used for posterior
+estimation, predictive imputation, and Bayesian survival analysis. This
+separation permits sensitivity analyses for model misspecification without
+changing the prespecified analysis model.
 
--   **`sim_comp_data()`**: Generates a complete trial dataset by calling `enrollment()`, `randomization()`, and `pwe_sim()`.
--   **`survival_adapt()`**: Simulates a single adaptive trial. Generates data via `sim_comp_data()`, conducts interim analyses using `posterior()` and `test_stop_success()`, and performs the final analysis via `test_final()`. With `return_trace = TRUE`, it also retains a compact audit trail for each completed interim look.
--   **`sim_trials()`**: Top-level entry point. Runs `survival_adapt()` across multiple trials (optionally in parallel) and collates results.
+### Interim prediction
 
-### Post-processing functions
+At look $\ell$, let $n_\ell$ be the number enrolled and let $N_{\max}$ be the
+maximum sample size. The observed interim data update the Gamma priors for the
+piecewise-exponential hazards. Posterior-predictive simulation then estimates
 
--   **`summarise_sims()`**: Summarizes the output of `sim_trials()`, computing operating characteristics such as power, expected sample size, and stopping probabilities.
--   **`plot_enrollment()`**: Draws the expected enrollment projection, optional simulated trajectories, and interim and maximum-sample-size milestones from explicit arguments or a stored trial design.
--   **`summarise_trial_trace()`**: Condenses an optional single-trial interim trace into a one-row stopping-path summary.
--   **`plot_trial_trace()`**: Visualizes predictive probabilities, thresholds, enrollment, and observed events for an optional single-trial trace.
--   **`plot_sim_stopping()`**: Visualizes marginal, conditional, cumulative, or flowchart stopping outcomes and enrolled sample sizes across simulated trials.
--   **`plot_sim_ocs()`**: Compares success, stopping, and expected-sample-size operating characteristics across treatment-effect scenarios.
--   **`plot_sim_decisions()`**: Maps simulated predictive probabilities into expected-success, continuation, and futility regions at each interim look.
+$$P_{n_\ell}
+  = \Pr(\text{final success after follow-up of the current cohort}
+    \mid \mathcal{D}^{\mathrm{obs}}_\ell)$$
 
-### Data generation and analysis utilities
+and
 
--   **`enrollment()`**: Simulates exact continuous-time arrivals under constant or piecewise-constant enrollment rates.
--   **`randomization()`**: Generates the blocked two-arm treatment allocation.
--   **`pwe_sim()`** and **`pwe_impute()`**: Simulate event times from, or conditionally impute them under, the piecewise-exponential model.
--   **`ppwe()`**: Computes cumulative event probabilities under piecewise-exponential hazards.
--   **`prop_to_haz()`**: Converts cumulative event probabilities at specified times to the corresponding piecewise hazards.
--   **`posterior()`**: Estimates the posterior distribution of piecewise exponential hazard rates using a conjugate Gamma model.
--   **`analyse_data()`**: Applies the chosen analysis method (`logrank`, `cox`, `bayes-surv`, `bayes-bin`, or `riskdiff`) to an (imputed) dataset.
--   **`impute_data()`**: Imputes missing event times for censored subjects using `pwe_impute()` or `pwe_sim()`.
--   **`haz_to_prop()`**: Converts posterior hazard rate draws to cumulative incidence proportions via `ppwe()`.
+$$P_{\max,\ell}
+  = \Pr(\text{final success after enrollment to } N_{\max}
+    \mid \mathcal{D}^{\mathrm{obs}}_\ell).$$
 
-The first five utilities in this section are exported for direct use. The final four are internal components of the adaptive analysis pipeline.
+Each predictive replicate completes pending outcomes under a posterior draw of
+the event-time hazards and applies the prespecified completed-data analysis.
+The proportions of successful replicates estimate $P_{n_\ell}$ and
+$P_{\max,\ell}$.
+
+The ordered decision rule is
+
+$$
+d_\ell =
+\begin{cases}
+\text{declare immediate success}, &
+  \widehat{P}_{n_\ell} > Q_\ell, \\
+\text{stop accrual for expected success}, &
+  S_\ell < \widehat{P}_{n_\ell} \le Q_\ell, \\
+\text{declare binding futility}, &
+  \widehat{P}_{n_\ell} \le S_\ell
+  \text{ and } \widehat{P}_{\max,\ell} < F_\ell, \\
+\text{continue enrollment}, & \text{otherwise.}
+\end{cases}
+$$
+
+The package requires $Q_\ell \ge S_\ell$. With the default $Q_\ell = 1$,
+immediate success is disabled. All comparisons are strict, so equality with a
+boundary does not cross it.
+
+`N_impute` controls the number of posterior-predictive replicates. For Bayesian
+completed-data analyses, `N_mcmc` controls the posterior draws within each
+replicate. The reported Monte Carlo standard errors and exact binomial bounds
+describe numerical uncertainty in the predictive probabilities; the interim
+decision itself uses the point estimate.
+
+For fixed-horizon binary analyses, event counts and denominators by treatment
+arm are sufficient statistics. Carrying these sufficient statistics into the
+completed-data analysis gives the same risk-difference or beta-binomial
+analysis as participant-level endpoint records.
+
+## Bayesian survival calculation
+
+Let $d_{aj}$ and $y_{aj}$ denote the observed event count and person-time in
+arm $a$ and interval $j$. With the independent prior
+
+$$\lambda_{aj} \sim
+  \operatorname{Gamma}(\alpha_{0aj},\beta_{0aj}),$$
+
+Gamma-exponential conjugacy gives
+
+$$\lambda_{aj} \mid \mathcal{D}^{\mathrm{obs}}_\ell
+  \sim \operatorname{Gamma}(
+    \alpha_{0aj}+d_{aj},
+    \beta_{0aj}+y_{aj}
+  ).$$
+
+For analysis cut-points $0<c_1<\cdots<c_{J-1}<\tau$, define interval widths
+
+$$\mathbf{w} = (c_1,c_2-c_1,\ldots,\tau-c_{J-1}).$$
+
+A posterior hazard draw implies cumulative hazard and event probability
+
+$$H_a(\tau)=\sum_{j=1}^{J}\lambda_{aj}w_j,
+\qquad
+p_a(\tau)=1-\exp\{-H_a(\tau)\}.$$
+
+These widths span the fixed endpoint horizon `end_of_study`; they are not
+shortened to the longest follow-up observed at an interim look. If no
+participant has contributed information to a later interval,
+`empty_interval = "prior"` leaves its posterior equal to its prior. This makes
+prior-predictive assessment particularly important when little late follow-up
+is expected at early looks.
+
+## Completed-data analysis
+
+The completed-data method determines whether each predictive replicate, and
+when required the final trial data, meets the success criterion.
+
+| `method` | Estimand and analysis | With imputation at the final analysis | Without final imputation |
+|:--|:--|:--|:--|
+| `bayes-surv` | Posterior treatment-minus-control event probability, or the treatment event probability in a single-arm design | Average posterior summaries across completed imputations | Analyze observed right-censored follow-up |
+| `bayes-bin` | Beta-binomial posterior for fixed-horizon event status | Average posterior summaries across completed imputations | Exclude participants without complete endpoint ascertainment |
+| `rmst` | Treatment-minus-control RMST through fixed `rmst_tau`, using a Wald test | Pool differences and Greenwood variances using Rubin's rules | Retain censoring; require support through the fixed horizon |
+| `cox` | Log hazard ratio from a Cox model | Pool estimates and variances using Rubin's rules | Analyze observed right-censored follow-up |
+| `riskdiff-wald` | Treatment-minus-control event-risk difference using a Wald test | Pool estimates and variances using Rubin's rules | Exclude participants without complete endpoint ascertainment |
+| `riskdiff-fm` | Treatment-minus-control event-risk difference using a Farrington-Manning score test | Not available when outcomes are missing: no validated FM pooling rule is implemented | Exclude participants without complete endpoint ascertainment |
+| `logrank` | Difference between survival distributions using a log-rank test | Not available because an imputation-pooling rule has not been specified | Analyze observed right-censored follow-up |
+
+For methods that accept `imputed_final = TRUE`, complete final outcomes use the
+selected test directly. FM simulations with this flag require zero dropout in
+both arms. Rubin pooling requires at least two imputations and positive total
+variance; zero total variance is non-estimable.
+
+For a frequentist method, the success measure is $1-p$; for a Bayesian method,
+it is the posterior probability of the prespecified alternative. In both cases,
+success requires the measure to be strictly greater than `prob_ha`.
+
+The imputation model and completed-data analysis model are deliberately
+distinct. For example, `method = "bayes-bin"` uses the piecewise-exponential
+model to impute endpoint status for participants whose endpoint is pending,
+then applies a beta-binomial model to the completed binary outcomes. Both sets
+of assumptions should therefore be examined in sensitivity analyses.
+
+## Summaries for design evaluation
+
+```{r, echo = FALSE, fig.width = 10, fig.height = 4.6, fig.alt = "Flowchart linking a single trial, repeated simulations, or an observed interim analysis to the corresponding summaries and graphical assessments."}
+DiagrammeR::grViz("
+digraph summaries {
+  graph [rankdir = LR, fontsize = 12, nodesep = 0.28, ranksep = 0.45]
+  node [shape = box, style = 'filled,rounded', fontname = Helvetica,
+        fontsize = 9, fillcolor = '#f5f5f5', color = '#777777']
+  edge [fontname = Helvetica, fontsize = 8, color = '#666666']
+
+  one [label = 'One simulated trial\nsurvival_adapt()',
+       fillcolor = '#dae8fc', color = '#6c8ebf']
+  many [label = 'Repeated simulated trials\nsim_trials()',
+        fillcolor = '#dae8fc', color = '#6c8ebf']
+  observed [label = 'Observed interim data\nevaluate_interim()',
+            fillcolor = '#dae8fc', color = '#6c8ebf']
+
+  trace [label = 'Interim decision history\nsummarise_trial_trace() / plot_trial_trace()']
+  enrollment [label = 'Enrollment and calendar time\nplot_enrollment() / summarise_calendar_time()']
+  oc [label = 'Operating characteristics\nsummarise_sims() / plot_sim_ocs()']
+  stopping [label = 'Stopping and decision regions\nplot_sim_stopping() / plot_sim_decisions()']
+
+  one -> trace
+  one -> enrollment
+  observed -> trace
+  many -> enrollment
+  many -> oc
+  many -> stopping
+}
+")
+```
+
+For one simulated trial or an observed data cut, the interim decision history
+shows the two predictive probabilities, their Monte Carlo uncertainty, the
+three decision thresholds, and the action at each completed look. For repeated
+simulations, `summarise_sims()` estimates power or type I error, probabilities
+of each stopping outcome, sample-size summaries, and Monte Carlo uncertainty.
+`summarise_calendar_time()` adds trial duration, accrual duration, analysis
+readiness, and follow-up burden.
+
+The planning functions `prop_to_haz()` and `ppwe()` connect clinically
+interpretable event probabilities to piecewise-exponential hazards.
+`plot_enrollment()` displays the expected enrollment trajectory and planned
+interim milestones. These quantities are useful checks that the numerical
+design corresponds to the assumptions intended for the protocol.
+
+## Prespecification and reproducibility
+
+Several conventions should be stated explicitly in a simulation report or
+statistical analysis plan:
+
+-   `treatment = 0` denotes control and `treatment = 1` denotes treatment;
+-   named arm-specific inputs use `control`, then `treatment`;
+-   `method` determines the effect scale for `h0` and the direction of
+    `alternative`; for RMST, benefit is a positive difference in time units;
+-   `rmst_tau` is fixed in advance for RMST and cannot exceed `end_of_study`;
+    a shorter restriction time does not shorten the follow-up schedule;
+-   `generation_cutpoints` governs event-time generation, whereas `cutpoints`
+    governs prediction and analysis;
+-   analysis intervals use the survival counting-process convention
+    $(\text{start},\text{stop}]$ when assigning observed events;
+-   `Qn`, `Sn`, `Fn`, `prob_ha`, `N_impute`, and `N_mcmc` are part of the
+    prespecified decision algorithm; and
+-   a recorded simulation seed permits exact reproduction of the Monte Carlo
+    study across the supported computing options.
+
+Operating characteristics should be evaluated over clinically plausible null
+and alternative scenarios, including nuisance parameters that may affect the
+amount of information available at interim looks. Numerical Monte Carlo error
+should be reported alongside every estimated operating characteristic.
+
+
+## Implementation map
+
+The internal `R/analysis_*.R` files group the completed-data methods and the
+analysis stages in one place. Method files use the `method` value in the name,
+with underscores replacing hyphens. The two risk-difference methods share
+one file because they use the same event counts, effect estimate, and
+supporting calculations.
+
+| Method or responsibility | Source file |
+|:--|:--|
+| `logrank` | `R/analysis_logrank.R` |
+| `cox` | `R/analysis_cox.R` |
+| `rmst` | `R/analysis_rmst.R` |
+| `bayes-surv` | `R/analysis_bayes_surv.R` |
+| `bayes-bin` | `R/analysis_bayes_bin.R` |
+| `riskdiff-wald`, `riskdiff-fm` | `R/analysis_riskdiff.R` |
+| Shared tests, pooling, and binary endpoint validation | `R/analysis_common.R` |
+| Completed-data dispatch | `R/analysis_completed.R` |
+| Predictively completed trial analysis | `R/analysis_predictive.R` |
+| Interim decision rules | `R/analysis_interim.R` |
+| Final analysis and imputation orchestration | `R/analysis_final.R` |
+
+Public entry points retain their function names: `survival_adapt.R`,
+`sim_trials.R`, and `evaluate_interim.R`. Hazard posterior calculations and
+imputation are shared across analysis methods, so their files retain names
+such as `survival_posterior.R` and `predictive_imputation.R`.

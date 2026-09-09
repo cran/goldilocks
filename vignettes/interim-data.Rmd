@@ -1,0 +1,258 @@
+---
+title: "Applying predictive decisions to an observed interim data cut"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Applying predictive decisions to an observed interim data cut}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup, message = FALSE}
+library(goldilocks)
+```
+
+`survival_adapt()` simulates a complete adaptive trial. `evaluate_interim()`
+instead applies the same predictive decision calculation to one observed
+interim data cut. It does not generate event, censoring, or enrollment times,
+and it does not retain a participant-level copy of the input in its result.
+
+## Preparing the data cut
+
+The input has one row for every enrolled participant and uses a common time
+unit throughout. Calendar-time `enrollment` is measured from first participant
+randomization at time zero. Subject-level `time` is measured from that
+participant's randomization.
+
+The status values make the reason for incomplete follow-up explicit:
+
+| `status` | Interpretation |
+|---|---|
+| `event` | The endpoint event has been observed. |
+| `complete` | Event-free follow-up reached `end_of_study`. |
+| `pending` | The participant remains under follow-up. |
+| `censored` | Follow-up ended early without an event. |
+
+A blinded data-management team can prepare enrollment, follow-up, event, and
+status fields without access to treatment assignments:
+
+```{r blinded-data}
+blinded_cut <- data.frame(
+  id = 1:8,
+  enrollment = 0:7,
+  time = c(8, 7, 6, 5, 4, 3, 2, 1),
+  event = c(1, 0, 0, 1, 0, 0, 0, 0),
+  status = c(
+    "event", "pending", "censored", "event",
+    "pending", "pending", "pending", "pending"
+  )
+)
+
+blinded_cut
+```
+
+The calculation itself is arm-specific. An independent unblinded statistician
+or service therefore joins the treatment assignment before running it. The
+participant-level input need not be distributed with the aggregate result.
+
+```{r unblinded-data}
+randomization_export <- data.frame(
+  id = 1:8,
+  treatment = c(0, 1, 0, 1, 0, 1, 0, 1)
+)
+
+interim_cut <- blinded_cut
+interim_cut$treatment <- randomization_export$treatment[
+  match(interim_cut$id, randomization_export$id)
+]
+interim_cut <- interim_cut[
+  c("id", "treatment", "enrollment", "time", "event", "status")
+]
+```
+
+## Evaluating the look
+
+Suppose this is the second planned look of a trial with maximum sample size 12,
+equal randomization, and ten time units of follow-up per participant:
+
+```{r evaluate-look}
+interim_result <- evaluate_interim(
+  data = interim_cut,
+  data_cut = 8,
+  look = 2,
+  N_total = 12,
+  end_of_study = 10,
+  rand_ratio = c(control = 1, treatment = 1),
+  method = "logrank",
+  alternative = "less",
+  Fn = 0.05,
+  Sn = 0.90,
+  Qn = 1,
+  prob_ha = 0.95,
+  N_impute = 20,
+  seed = 20260831
+)
+
+interim_result
+interim_result$decision
+interim_result$monte_carlo
+```
+
+Here `Qn = 1` disables an immediate success claim. Crossing `Sn` stops accrual
+for expected success while enrolled participants continue follow-up. The method,
+alternative, and thresholds must match the prespecified trial design.
+
+At the maximum sample size, equal randomization implies six participants per
+arm. Four have already accrued in each arm, so the predictive calculation
+includes two potential future participants per arm:
+
+```{r allocation-diagnostics}
+interim_result$diagnostics$target_allocation
+interim_result$diagnostics$current_allocation
+interim_result$diagnostics$potential_accruals
+```
+
+No block size or future randomization sequence is needed. The design must have
+an exactly allocable maximum sample size: for example, a 1:2 ratio requires
+`N_total` to be divisible by three. Observed enrollment in either arm cannot
+already exceed its implied maximum.
+
+## Using separate predictive and analysis priors
+
+Suppose a sponsor wants external evidence to inform the prediction of future
+events, while the Bayesian survival success test uses a diffuse prior. Supply
+both `prior_surv` and `prior_surv_final`. **The latter is used now, inside each
+interim predictive replicate, as well as at the actual final analysis.**
+
+| Step in one interim predictive replicate | Prior used |
+|---|---|
+| Update observed events and exposure, draw hazards, and generate outstanding outcomes | `prior_surv` |
+| Analyze that hypothetical completed trial and compare its posterior probability with `prob_ha` | `prior_surv_final` |
+
+Repeat these steps and calculate the fraction of completed trials that pass.
+The same pair of priors is used for current-sample and maximum-sample
+predictions. Each completed-data analysis starts from the specified analysis
+prior, rather than using the prediction posterior as a new prior.
+
+For this illustration, interpret the data's time units as months. The
+predictive Gamma priors below have mean hazards of 0.05 and 0.03 per month for
+control and treatment. Their rate parameters use patient-months. These values
+are illustrative; the actual predictive prior needs justification from the
+external evidence and a prior-predictive assessment.
+
+```{r separate-prior-look}
+predictive_prior <- list(
+  control = c(shape = 10, rate = 200),
+  treatment = c(shape = 6, rate = 200)
+)
+analysis_prior <- c(shape = 0.1, rate = 0.1)
+
+bayes_prior_result <- evaluate_interim(
+  data = interim_cut,
+  data_cut = 8,
+  look = 2,
+  N_total = 12,
+  end_of_study = 10,
+  method = "bayes-surv",
+  alternative = "less",
+  h0 = 0,
+  prior_surv = predictive_prior,    # Generates outstanding outcomes
+  prior_surv_final = analysis_prior, # Tests each hypothetical completed trial
+  Fn = 0.05,
+  Sn = 0.90,
+  Qn = 1,
+  prob_ha = 0.975,
+  N_impute = 100,
+  N_mcmc = 1000,
+  seed = 20260909
+)
+
+knitr::kable(
+  bayes_prior_result$diagnostics$prior[
+    c("stage", "arm", "shape", "rate", "mean_hazard")
+  ],
+  digits = 3,
+  caption = "Gamma priors used in the two parts of this interim calculation."
+)
+bayes_prior_result$probabilities
+```
+
+Here the rows labelled `final` describe the analysis prior already used to
+test the hypothetical completed datasets. `diagnostics$posterior` describes
+the predictive posterior based on the observed interim data.
+
+**Omitting `prior_surv_final` would also use `predictive_prior` in the success
+tests. The package does not automatically replace an informative predictive
+prior with a weak analysis prior.** The two priors need not be distinct; the
+default intentionally uses one prior for both roles.
+
+Use these same two arguments in `survival_adapt()` or `sim_trials()` when
+calibrating the design. The small Monte Carlo sizes here demonstrate the API;
+precision and operating characteristics must be assessed for the deployed
+design. At the actual final analysis, `prior_surv_final` is also used for any
+optional imputation of missing outcomes. Even with a separate analysis prior,
+predictive borrowing can affect the stopping decision and sample size.
+
+This example concerns `method = "bayes-surv"`. With `method = "bayes-bin"`,
+the completed-data success tests use `prior_bin` at both interim and final;
+`prior_surv_final` controls only optional final imputation.
+
+## Using a prespecified RMST endpoint
+
+For a design that prespecifies RMST as its analysis, supply `method = "rmst"`
+and the fixed restriction time. The same illustrative data cut can demonstrate
+this separate design, targeting treatment-minus-control RMST through six time
+units while follow-up continues through ten:
+
+```{r evaluate-rmst-look}
+rmst_result <- evaluate_interim(
+  data = interim_cut,
+  data_cut = 8,
+  look = 2,
+  N_total = 12,
+  end_of_study = 10,
+  rand_ratio = c(control = 1, treatment = 1),
+  method = "rmst",
+  rmst_tau = 6,
+  alternative = "greater",
+  h0 = 0,
+  Fn = 0.05,
+  Sn = 0.90,
+  Qn = 1,
+  prob_ha = 0.95,
+  N_impute = 20,
+  seed = 20260908
+)
+
+rmst_result$decision
+rmst_result$monte_carlo
+rmst_result$metadata$design[c("method", "rmst_tau", "alternative", "h0")]
+```
+
+Positive effects mean longer event-free time on treatment, so benefit uses
+`alternative = "greater"`. Both `h0` and `rmst_tau` use the data's time units.
+The horizon remains fixed across looks and predictive imputations. Input
+`status = "complete"` still requires event-free follow-up to `end_of_study`,
+even when a participant has already reached `rmst_tau`. The
+[RMST vignette](rmst.html) explains the final analysis and its support and
+variance requirements. These small Monte Carlo examples demonstrate the API;
+the deployed design needs its own calibration and precision assessment.
+
+## Reviewing and retaining the audit trail
+
+The decision uses the Monte Carlo point estimates. The standard errors and
+exact one-sided bounds describe finite-draw uncertainty but do not change the
+decision. The interim record contains the same quantities retained for a
+simulated adaptive trial and can be summarized or plotted in the same way:
+
+```{r audit-trace}
+summarise_trial_trace(interim_result)
+interim_result$trace
+```
+
+The saved audit information records the evaluated design, package version,
+data cut, time-origin convention, and simulation seed. Supplying `seed` makes
+the predictive calculation exactly reproducible.

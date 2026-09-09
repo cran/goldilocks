@@ -1,92 +1,168 @@
-#' @title Simulate a complete clinical trial with event data drawn from a
-#'   piecewise exponential distribution
+#' @title Simulate complete trial data under piecewise-exponential event rates
 #'
-#' @param hazard_treatment vector. Finite non-negative constant hazard rates
-#'   under the treatment arm.
-#' @param hazard_control vector. Finite non-negative constant hazard rates
-#'   under the control arm.
-#' @param cutpoints finite, positive, strictly increasing interior times at
-#'   which the baseline hazard changes. The number of hazards for each arm must
-#'   be one greater than the number of cutpoints. Default is `NULL`, which
-#'   corresponds to a simple (non-piecewise) exponential model.
-#' @param N_total integer. Maximum sample size allowable
-#' @param lambda finite positive enrollment rates per unit time. Supply one rate
-#'   for each interval defined by `lambda_time`. See [enrollment()] for the
-#'   precise continuous-time process and time-origin convention.
-#' @param lambda_time `NULL`, or finite, positive, strictly increasing internal
-#'   times at which the enrollment rate changes. The initial boundary at zero
-#'   is implicit, so `length(lambda)` must equal `length(lambda_time) + 1`.
-#' @param end_of_study finite study endpoint, strictly greater than the last
-#'   cutpoint.
-#' @param block scalar. Block size for generating the randomization schedule.
-#' @param rand_ratio vector. Randomization allocation for the ratio of control
-#'   to treatment. Integer values mapping the size of the block. See
-#'   [randomization()] for more details.
-#' @param prop_loss scalar. Overall proportion of subjects lost to follow-up.
-#'   Subjects are selected at random for LTFU regardless of treatment assignment or
-#'   event status. Each LTFU subject's observed time is drawn from a
-#'   `Uniform(0, t)` distribution, where `t` is their potential
-#'   event or censoring time. Since the LTFU time is always less than
-#'   `t`, the event has not yet occurred at dropout and the subject is
-#'   right-censored. Defaults to zero.
+#' @description Simulates enrollment, treatment allocation, event or censoring
+#'   times, and loss to follow-up for a single-arm or randomized two-arm trial.
+#'   Event times follow a piecewise-exponential distribution within each arm.
+#'
+#' @param hazard_treatment A required numeric vector of finite, non-negative
+#'   event rates for the treatment arm. Supply one rate per interval defined by
+#'   `generation_cutpoints`; a single value specifies a constant event rate.
+#' @param hazard_control `NULL` (the default) for a single-arm trial, or a
+#'   numeric vector of finite, non-negative event rates for the control arm in a
+#'   two-arm trial. It must contain one rate per interval defined by
+#'   `generation_cutpoints`.
+#' @param generation_cutpoints `NULL` (the default), or a numeric vector of
+#'   finite, positive, strictly increasing interior follow-up times at which the
+#'   data-generating hazard changes. The number of hazards for each arm must be
+#'   one greater than the number of generation cutpoints. `NULL` specifies a
+#'   constant-hazard data-generating model.
+#' @param N_total A required positive integer giving the maximum total sample
+#'   size.
+#' @param lambda A numeric vector of finite, positive enrollment rates per unit
+#'   of calendar time. Supply one rate for each interval defined by
+#'   `lambda_time`. The default is `0.3`. See [enrollment()] for the
+#'   continuous-time enrollment model and time origin.
+#' @param lambda_time `NULL` (the default), or a numeric vector of finite,
+#'   positive, strictly increasing calendar times at which the enrollment rate
+#'   changes. Time zero is implicit, and `length(lambda)` must equal
+#'   `length(lambda_time) + 1`.
+#' @param end_of_study A required finite, positive numeric value giving the
+#'   planned follow-up time for each subject. It must be later than the final
+#'   `generation_cutpoints` value and use the same time unit.
+#' @param block A positive integer vector of permitted randomization block
+#'   sizes. Every value must be a multiple of `sum(rand_ratio)`. The default is
+#'   `2` and the argument is ignored for a single-arm trial.
+#' @param rand_ratio A length-two positive integer vector giving the control to
+#'   treatment randomization ratio. The default is
+#'   `c(control = 1, treatment = 1)`. Name the values `control` and `treatment`;
+#'   either supplied order is accepted and matched by name. A legacy unnamed
+#'   vector remains accepted in `c(control, treatment)` order. Unequal unnamed
+#'   values produce a warning because names may be required in a future major
+#'   release. See [randomization()] for more details.
+#' @param prop_loss A numeric vector containing one or two probabilities in
+#'   `[0, 1)`. Each value is the dropout-time CDF at `end_of_study`:
+#'   \eqn{P(D \le \tau) = p}, where \eqn{\tau} is the planned follow-up duration
+#'   per subject. Independently of event time and enrollment, each subject's
+#'   dropout time \eqn{D} is exponentially distributed with rate
+#'   \eqn{-\log(1-p)/\tau}. The observed time is the minimum of event time,
+#'   dropout time, and `end_of_study`; an event occurring before dropout is
+#'   retained. Thus, `prop_loss` is not the expected proportion actually
+#'   censored by dropout: that proportion can be lower because events occur
+#'   first, and the realized number of dropouts varies between trials. A single
+#'   value applies the same dropout distribution to every arm. For a two-arm
+#'   design, supply a length-two vector named `control` and `treatment` for
+#'   arm-specific probabilities; supplied order does not matter. Single-arm
+#'   designs require one probability. The default `0` sets dropout time to
+#'   infinity without drawing random numbers. A value of `1` is rejected because
+#'   it requires an infinite exponential rate.
 #'
 #' @details Enrollment is simulated directly in continuous time by
 #'   [enrollment()]. The first patient is placed at time zero and all subsequent
 #'   enrollment times are measured from first patient in. No uniform jitter is
 #'   added in `sim_comp_data()`.
 #'
-#'   `lambda_time` and `cutpoints` both contain internal change times, but they
-#'   describe different clocks. `lambda_time` describes changes in the trial's
-#'   calendar-time enrollment rate measured from first patient in. `cutpoints`
-#'   describes changes in an individual subject's event hazard measured from
-#'   that subject's enrollment. They need not have the same values or length.
-#'   All time quantities supplied to a simulation should nevertheless use one
-#'   common unit, such as days or months.
+#'   `lambda_time` and `generation_cutpoints` both contain internal change
+#'   times, but they describe different clocks. `lambda_time` describes changes
+#'   in the trial's calendar-time enrollment rate measured from first patient
+#'   in. `generation_cutpoints` describes changes in an individual subject's
+#'   event hazard measured from that subject's enrollment. They need not have
+#'   the same values or length. All time quantities supplied to a simulation
+#'   should nevertheless use one common unit, such as days or months.
 #'
-#' @return A data frame with 1 row per subject and columns:
+#'   PWEALL represents the continuous generating hazard with pieces closed on
+#'   the left and open on the right. This differs from the package's open-left,
+#'   closed-right convention for assigning realized times only at the cutpoints
+#'   themselves, which have probability zero under the continuous model. The
+#'   cumulative hazard, event-time distribution, and generated simulations are
+#'   therefore unchanged.
 #'
-#'   - `time`: Time of event or censoring time.
-#'   - `treatment`: Treatment assignment, coded `1L` for the treatment arm and
-#'     `0L` for the control arm. Single-arm designs have `treatment = 1L` for
+#'   Dropout is independent censoring conditional on treatment arm. For event
+#'   time \eqn{T}, `loss_to_fu` is true only when \eqn{D < \min(T, \tau)}.
+#'   Administrative censoring and dropout after an observed event are not
+#'   counted as loss to follow-up. For example, `prop_loss = 0.05` with
+#'   `end_of_study = 12` specifies a 5% dropout CDF at 12 months if the time
+#'   unit is months; it does not force five losses in a 100-subject trial. Equal
+#'   dropout probabilities in arms with different event hazards need not yield
+#'   equal observed dropout proportions.
+#'
+#'   To express a dropout probability \eqn{q} supplied at a different reference
+#'   time \eqn{t_0}, use \eqn{p = 1 - (1-q)^{\tau/t_0}} at `end_of_study` to
+#'   preserve the same exponential dropout hazard. Treatment discontinuation is
+#'   not separately modeled and should not be treated as loss to follow-up if
+#'   endpoint collection continues.
+#'
+#'   This independent exponential mechanism replaces selection of
+#'   `ceiling(prop_loss * arm size)` subjects followed by censoring uniformly
+#'   before each selected subject's potential event or administrative time.
+#'   Positive `prop_loss` values therefore change seeded results and design
+#'   operating characteristics relative to the previous mechanism. Simulations
+#'   with `prop_loss = 0` are unchanged.
+#'
+#' @return A data frame with one row per subject and columns:
+#'
+#'   - `time`: Numeric event or censoring time.
+#'   - `treatment`: Numeric treatment indicator, coded `1` for the treatment arm
+#'     and `0` for the control arm. Single-arm designs have `treatment = 1` for
 #'     every subject.
-#'   - `event`: Indicator of whether event occurred (`1L` if occurred and `0L`
-#'     if right-censored).
-#'   - `enrollment`: Time of patient enrollment relative to the time the trial
-#'     enrolled the first patient. The package treats enrollment and
-#'     randomization as occurring at the same time.
-#'   - `id`: Identification number for each patient.
-#'   - `loss_to_fu`: Indicator of whether the patient was lost to follow-up
-#'     during observation.
+#'   - `event`: Numeric event indicator, coded `1` for an event and `0` for
+#'     right-censoring.
+#'   - `enrollment`: Numeric time of subject enrollment relative to first
+#'     patient in. The package treats enrollment and randomization as occurring
+#'     at the same time.
+#'   - `id`: Integer subject identifier.
+#'   - `loss_to_fu`: Logical indicator that dropout occurred before both the
+#'     event and the administrative follow-up horizon.
 #'
-#' @importFrom stats runif sd
+#' @importFrom stats rexp sd
 #' @export
 sim_comp_data <- function(
   hazard_treatment,
   hazard_control = NULL,
-  cutpoints = NULL,
+  generation_cutpoints = NULL,
   N_total,
   lambda = 0.3,
   lambda_time = NULL,
   end_of_study,
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0
 ) {
   ##############################################################################
   ### Run checks on arguments
   ##############################################################################
 
-  validate_positive_integer_scalar(N_total, "N_total")
-  validate_single_probability(prop_loss, "prop_loss")
-  validate_cutpoints(cutpoints)
-  validate_endpoint_time(end_of_study, cutpoints, "end_of_study")
-
   # Assign: indicator of whether single-arm study
   single_arm <- is.null(hazard_control)
-  validate_piecewise_hazard(hazard_treatment, cutpoints, "hazard_treatment")
+
+  validate_positive_integer_scalar(N_total, "N_total")
+  prop_loss <- normalize_prop_loss(prop_loss, single_arm)
+  validate_cutpoints(generation_cutpoints, "generation_cutpoints")
+  validate_endpoint_time(
+    end_of_study,
+    generation_cutpoints,
+    "end_of_study",
+    "generation_cutpoints"
+  )
+
+  validate_piecewise_hazard(
+    hazard_treatment,
+    generation_cutpoints,
+    "hazard_treatment",
+    "generation_cutpoints"
+  )
   if (!single_arm) {
-    validate_piecewise_hazard(hazard_control, cutpoints, "hazard_control")
-    validate_randomization_args(N_total, block, rand_ratio)
+    validate_piecewise_hazard(
+      hazard_control,
+      generation_cutpoints,
+      "hazard_control",
+      "generation_cutpoints"
+    )
+    rand_ratio <- validate_randomization_args(
+      N_total,
+      block,
+      rand_ratio,
+      allocation_name = "rand_ratio"
+    )
   }
 
   ##############################################################################
@@ -127,7 +203,7 @@ sim_comp_data <- function(
       hazard = hazard_control,
       n = sum(treatment == 0),
       maxtime = end_of_study,
-      cutpoints = cutpoints
+      cutpoints = generation_cutpoints
     )
     time[treatment == 0] <- sim_control$time
     event[treatment == 0] <- sim_control$event
@@ -137,17 +213,27 @@ sim_comp_data <- function(
     hazard = hazard_treatment,
     n = sum(treatment == 1),
     maxtime = end_of_study,
-    cutpoints = cutpoints
+    cutpoints = generation_cutpoints
   )
   time[treatment == 1] <- sim_treatment$time
   event[treatment == 1] <- sim_treatment$event
 
-  # Simulate loss to follow-up
-  loss_to_fu <- rep(FALSE, N_total)
-  if (prop_loss > 0) {
-    n_loss_to_fu <- ceiling(prop_loss * N_total)
-    loss_to_fu[sample(1:N_total, n_loss_to_fu)] <- TRUE
+  # Generate dropout independently of each subject's potential event time.
+  # A zero probability consumes no RNG, preserving no-dropout simulations.
+  dropout_time <- rep(Inf, N_total)
+  treatment_values <- c(control = 0L, treatment = 1L)
+  for (arm in names(prop_loss)) {
+    arm_index <- which(treatment == treatment_values[[arm]])
+    if (prop_loss[[arm]] > 0) {
+      dropout_rate <- -log1p(-prop_loss[[arm]]) / end_of_study
+      dropout_time[arm_index] <- rexp(length(arm_index), rate = dropout_rate)
+    }
   }
+  # time already contains min(event time, administrative horizon). Strict
+  # comparison retains an event (or administrative censoring) at an exact tie.
+  loss_to_fu <- dropout_time < time
+  time <- pmin(time, dropout_time)
+  event[loss_to_fu] <- 0
 
   # Creating a new data.frame for all the variables
   data_total <- data.frame(
@@ -158,16 +244,6 @@ sim_comp_data <- function(
     id = 1:N_total,
     loss_to_fu = loss_to_fu
   )
-
-  # Subjects lost are uniformly distributed
-  if (prop_loss > 0) {
-    data_total$time[data_total$loss_to_fu] <- runif(
-      n_loss_to_fu,
-      0,
-      data_total$time[data_total$loss_to_fu]
-    )
-    data_total$event[data_total$loss_to_fu] <- rep(0, n_loss_to_fu)
-  }
 
   return(data_total)
 }

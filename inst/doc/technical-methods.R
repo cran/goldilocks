@@ -17,6 +17,7 @@ knitr::opts_chunk$set(
 #   prior_surv       = prior_surv,
 #   Fn               = Fn,
 #   Sn               = Sn,
+#   Qn               = Qn,
 #   prob_ha          = prob_ha,
 #   N_impute         = N_impute,
 #   N_mcmc           = N_mcmc,
@@ -24,15 +25,19 @@ knitr::opts_chunk$set(
 #   method           = method,
 #   seed             = 12345)
 # 
-# summarise_sims(out$sims)
+# summarise_sims(
+#   out,
+#   max_mcse = c(power = 0.005, stop_futility = 0.01, mean_N = 1)
+# )
 
 ## ----eval=FALSE---------------------------------------------------------------
 # scenario_oc <- summarise_sims(list(
-#   "null" = null_sims$sims,
-#   "moderate" = moderate_sims$sims,
-#   "target" = target_sims$sims
+#   "null" = null_sims,
+#   "moderate" = moderate_sims,
+#   "target" = target_sims
 # ))
-# scenario_oc$true_effect <- c(0, -0.10, -0.20)
+# effect_by_scenario <- c(null = 0, moderate = -0.10, target = -0.20)
+# scenario_oc$true_effect <- unname(effect_by_scenario[scenario_oc$scenario])
 # 
 # plot_sim_ocs(
 #   scenario_oc,

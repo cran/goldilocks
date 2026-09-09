@@ -25,6 +25,54 @@ test_that("survival_adapt-bayes-surv", {
   expect_s3_class(out, "data.frame")
 })
 
+test_that("prepared Bayesian survival analysis preserves seeded results", {
+  args <- list(
+    hazard_treatment = c(0.015, 0.025),
+    hazard_control = c(0.025, 0.035),
+    cutpoints = 6,
+    N_total = 60,
+    lambda = 12,
+    interim_look = 30,
+    end_of_study = 12,
+    prior_surv = list(
+      control = c(0.5, 0.25),
+      treatment = c(1, 0.5)
+    ),
+    prior_surv_final = list(
+      control = c(1, 0.5),
+      treatment = c(2, 1)
+    ),
+    prop_loss = 0.1,
+    alternative = "less",
+    Fn = 0.05,
+    Sn = 0.9,
+    prob_ha = 0.95,
+    N_impute = 3,
+    N_mcmc = 5,
+    method = "bayes-surv",
+    imputed_final = TRUE,
+    return_trace = TRUE
+  )
+
+  set.seed(6195)
+  prepared_result <- do.call(survival_adapt, args)
+  prepared_seed <- .Random.seed
+
+  general_analysis <- function(..., interval_widths = NULL) {
+    analyse_bayes_surv_sufficient_stats(...)
+  }
+  local_mocked_bindings(
+    analyse_prepared_bayes_surv = general_analysis,
+    .package = "goldilocks"
+  )
+  set.seed(6195)
+  general_result <- do.call(survival_adapt, args)
+  general_seed <- .Random.seed
+
+  expect_identical(prepared_result, general_result)
+  expect_identical(prepared_seed, general_seed)
+})
+
 test_that("survival_adapt-bayes-bin", {
   set.seed(1)
   out <- survival_adapt(
@@ -133,7 +181,7 @@ test_that("survival_adapt-cox", {
   expect_true(!is.na(out$est_final))
 })
 
-test_that("survival_adapt-riskdiff", {
+test_that("survival_adapt-riskdiff-wald", {
   set.seed(1)
   out <- survival_adapt(
     hazard_treatment = -log(0.85) / 36,
@@ -155,14 +203,14 @@ test_that("survival_adapt-riskdiff", {
     prob_ha = 0.975,
     N_impute = 2,
     N_mcmc = 2,
-    method = "riskdiff"
+    method = "riskdiff-wald"
   )
 
   expect_s3_class(out, "data.frame")
   expect_true(!is.na(out$est_final))
 })
 
-test_that("survival_adapt-riskdiff excludes LTFU when imputed_final = FALSE", {
+test_that("survival_adapt riskdiff-wald excludes LTFU without imputation", {
   set.seed(3927)
   out <- survival_adapt(
     hazard_treatment = -log(0.85) / 36,
@@ -171,7 +219,7 @@ test_that("survival_adapt-riskdiff excludes LTFU when imputed_final = FALSE", {
     N_total = 400,
     lambda = 20,
     lambda_time = NULL,
-    interim_look = 200,
+    interim_look = NULL,
     end_of_study = 36,
     prior_surv = c(0.1, 0.1),
     block = 2,
@@ -184,7 +232,7 @@ test_that("survival_adapt-riskdiff excludes LTFU when imputed_final = FALSE", {
     prob_ha = 0.975,
     N_impute = 2,
     N_mcmc = 2,
-    method = "riskdiff",
+    method = "riskdiff-wald",
     imputed_final = FALSE
   )
 
@@ -220,33 +268,37 @@ test_that("survival_adapt pools imputed Cox final analyses", {
   expect_true(is.finite(out$est_final))
 })
 
-test_that("survival_adapt pools imputed risk-difference final analyses", {
-  set.seed(2084)
-  out <- survival_adapt(
-    hazard_treatment = -log(0.85) / 36,
-    hazard_control = -log(0.7) / 36,
-    cutpoints = NULL,
-    N_total = 200,
-    lambda = 20,
-    lambda_time = NULL,
-    interim_look = NULL,
-    end_of_study = 36,
-    prop_loss = 0.30,
-    alternative = "less",
-    h0 = 0,
-    prob_ha = 0.95,
-    N_impute = 5,
-    method = "riskdiff",
-    imputed_final = TRUE
-  )
+test_that("survival_adapt pools imputed Wald analyses and rejects FM imputation", {
+  run_analysis <- function(method) {
+    set.seed(2084)
+    survival_adapt(
+      hazard_treatment = -log(0.85) / 36,
+      hazard_control = -log(0.7) / 36,
+      cutpoints = NULL,
+      N_total = 200,
+      lambda = 20,
+      lambda_time = NULL,
+      interim_look = NULL,
+      end_of_study = 36,
+      prop_loss = 0.30,
+      alternative = "less",
+      h0 = 0,
+      prob_ha = 0.95,
+      N_impute = 5,
+      method = method,
+      imputed_final = TRUE
+    )
+  }
+  wald <- run_analysis("riskdiff-wald")
+  expect_error(run_analysis("riskdiff-fm"), "riskdiff-fm.*pooling rule")
 
-  expect_s3_class(out, "data.frame")
-  expect_true(out$post_prob_ha >= 0 && out$post_prob_ha <= 1)
-  expect_true(is.finite(out$est_final))
+  expect_s3_class(wald, "data.frame")
+  expect_true(wald$post_prob_ha >= 0 && wald$post_prob_ha <= 1)
+  expect_true(is.finite(wald$est_final))
 })
 
 test_that("survival_adapt requires multiple imputations for Rubin pooling", {
-  for (method in c("cox", "riskdiff")) {
+  for (method in c("cox", "riskdiff-wald")) {
     expect_error(
       survival_adapt(
         hazard_treatment = -log(0.85) / 36,
@@ -305,7 +357,7 @@ test_that("survival_adapt-complex", {
     end_of_study = 24,
     prior_surv = c(0.1, 0.1),
     block = 3,
-    rand_ratio = c(2, 1),
+    rand_ratio = c(control = 2, treatment = 1),
     prop_loss = 0,
     alternative = "less",
     h0 = 0,
@@ -319,6 +371,183 @@ test_that("survival_adapt-complex", {
   )
 
   expect_s3_class(out, "data.frame")
+})
+
+test_that("batched Bayesian interim imputation is reproducible", {
+  run_once <- function() {
+    set.seed(4205)
+    survival_adapt(
+      hazard_treatment = c(0.02, 0.01),
+      hazard_control = c(0.03, 0.015),
+      cutpoints = 6,
+      N_total = 30,
+      lambda = 10,
+      interim_look = 15,
+      end_of_study = 12,
+      prior_surv = c(0.1, 0.1),
+      alternative = "less",
+      Fn = 0.05,
+      Sn = 1,
+      N_impute = 3,
+      N_mcmc = 4,
+      method = "bayes-surv",
+      return_trace = TRUE
+    )
+  }
+
+  expect_identical(run_once(), run_once())
+})
+
+test_that("generation_cutpoints defaults exactly to analysis cutpoints", {
+  common_args <- list(
+    hazard_treatment = c(0.02, 0.01),
+    hazard_control = c(0.03, 0.015),
+    cutpoints = 12,
+    N_total = 30,
+    lambda = 10,
+    interim_look = NULL,
+    end_of_study = 24,
+    alternative = "two.sided",
+    method = "logrank"
+  )
+
+  set.seed(1945)
+  from_default <- do.call(survival_adapt, common_args)
+  set.seed(1945)
+  from_explicit <- do.call(
+    survival_adapt,
+    c(common_args, list(generation_cutpoints = common_args$cutpoints))
+  )
+
+  expect_identical(from_default, from_explicit)
+  expect_identical(
+    attr(from_default, "arguments", exact = TRUE)$generation_cutpoints,
+    common_args$cutpoints
+  )
+})
+
+test_that("generation and analysis can use different cutpoint partitions", {
+  analysis_cutpoints <- c(6, 12, 18)
+  generation_cutpoints <- c(8, 16)
+  prior <- rbind(
+    shape = rep(0.1, 4),
+    rate = rep(0.1, 4)
+  )
+
+  set.seed(1946)
+  out <- survival_adapt(
+    hazard_treatment = c(0.02, 0.015, 0.01),
+    hazard_control = c(0.03, 0.02, 0.012),
+    cutpoints = analysis_cutpoints,
+    generation_cutpoints = generation_cutpoints,
+    N_total = 40,
+    lambda = 10,
+    interim_look = 20,
+    end_of_study = 24,
+    prior_surv = prior,
+    prior_surv_final = prior,
+    alternative = "two.sided",
+    Fn = 0,
+    Sn = 1,
+    N_impute = 2,
+    N_mcmc = 2,
+    method = "logrank"
+  )
+
+  arguments <- attr(out, "arguments", exact = TRUE)
+  expect_identical(arguments$cutpoints, analysis_cutpoints)
+  expect_identical(arguments$generation_cutpoints, generation_cutpoints)
+})
+
+test_that("constant and piecewise generation-analysis models are independent", {
+  cases <- list(
+    list(
+      hazard_treatment = 0.02,
+      hazard_control = 0.03,
+      cutpoints = c(6, 12),
+      generation_cutpoints = NULL
+    ),
+    list(
+      hazard_treatment = c(0.02, 0.015, 0.01),
+      hazard_control = c(0.03, 0.02, 0.012),
+      cutpoints = NULL,
+      generation_cutpoints = c(6, 12)
+    )
+  )
+
+  for (i in seq_along(cases)) {
+    set.seed(2000 + i)
+    expect_no_error(
+      do.call(
+        survival_adapt,
+        c(
+          cases[[i]],
+          list(
+            N_total = 20,
+            lambda = 10,
+            interim_look = NULL,
+            end_of_study = 24,
+            alternative = "less",
+            N_mcmc = 5,
+            method = "bayes-surv"
+          )
+        )
+      )
+    )
+  }
+})
+
+test_that("generation and analysis partitions validate independently", {
+  common_args <- list(
+    hazard_treatment = c(0.02, 0.015, 0.01),
+    hazard_control = c(0.03, 0.02, 0.012),
+    cutpoints = c(6, 12, 18),
+    generation_cutpoints = c(8, 16),
+    N_total = 20,
+    lambda = 10,
+    interim_look = NULL,
+    end_of_study = 24,
+    alternative = "two.sided",
+    method = "logrank"
+  )
+
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(common_args, list(hazard_treatment = c(0.02, 0.01)))
+    ),
+    "length of 'generation_cutpoints'"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(
+        common_args,
+        list(prior_surv = matrix(0.1, nrow = 2, ncol = 3))
+      )
+    ),
+    "2 x 4"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(common_args, list(end_of_study = 18))
+    ),
+    "greater than the last cutpoint"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(
+        common_args,
+        list(
+          cutpoints = c(6, 12),
+          generation_cutpoints = c(8, 24)
+        )
+      )
+    ),
+    "last value in 'generation_cutpoints'"
+  )
 })
 
 test_that("error-interim-looks", {
@@ -548,7 +777,7 @@ test_that("survival_adapt-cox-one-sided-greater", {
   expect_true(out$post_prob_ha >= 0 && out$post_prob_ha <= 1)
 })
 
-test_that("survival_adapt-riskdiff supports one-sided margins", {
+test_that("survival_adapt riskdiff-wald supports one-sided margins", {
   set.seed(908)
   out <- survival_adapt(
     hazard_treatment = -log(0.85) / 36,
@@ -570,7 +799,7 @@ test_that("survival_adapt-riskdiff supports one-sided margins", {
     prob_ha = 0.975,
     N_impute = 2,
     N_mcmc = 2,
-    method = "riskdiff"
+    method = "riskdiff-wald"
   )
 
   expect_s3_class(out, "data.frame")
@@ -587,8 +816,33 @@ test_that("survival_adapt no longer accepts method = 'chisq'", {
       end_of_study = 36,
       method = "chisq"
     ),
-    "or 'riskdiff'"
+    "'riskdiff-wald', or 'riskdiff-fm'",
+    fixed = TRUE
   )
+})
+
+test_that("survival_adapt maps deprecated riskdiff to riskdiff-wald", {
+  arguments <- list(
+    hazard_treatment = prop_to_haz(0.2, endtime = 1),
+    hazard_control = prop_to_haz(0.4, endtime = 1),
+    N_total = 40,
+    lambda = 100,
+    end_of_study = 1,
+    alternative = "less",
+    method = "riskdiff"
+  )
+
+  set.seed(6310)
+  expect_warning(
+    deprecated <- do.call(survival_adapt, arguments),
+    "deprecated; use `method = \"riskdiff-wald\"`"
+  )
+  arguments$method <- "riskdiff-wald"
+  set.seed(6310)
+  explicit <- do.call(survival_adapt, arguments)
+
+  expect_equal(deprecated, explicit)
+  expect_identical(attr(deprecated, "arguments")$method, "riskdiff-wald")
 })
 
 test_that("survival_adapt validates risk-difference margins", {
@@ -598,7 +852,7 @@ test_that("survival_adapt validates risk-difference margins", {
       hazard_control = -log(0.7) / 36,
       N_total = 100,
       end_of_study = 36,
-      method = "riskdiff",
+      method = "riskdiff-wald",
       h0 = 1.1
     ),
     "\\[-1, 1\\]"
@@ -685,8 +939,11 @@ test_that("survival_adapt works with no interim looks and default thresholds", {
   expect_s3_class(out, "data.frame")
   expect_equal(out$N_enrolled, 200)
   expect_equal(out$stop_futility, 0)
+  expect_equal(out$stop_immediate_success, 0)
   expect_equal(out$stop_expected_success, 0)
+  expect_identical(attr(out, "decision_design")$Qn, numeric())
   expect_true(is.na(out$ppp_success))
+  expect_equal(out$decision_time, out$analysis_ready_time)
 })
 
 test_that("survival_adapt validates probability, count, and prior arguments", {
@@ -722,6 +979,17 @@ test_that("survival_adapt validates probability, count, and prior arguments", {
     "Sn"
   )
   expect_error(
+    do.call(survival_adapt, modifyList(common_args, list(Qn = 1.2))),
+    "Qn"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(common_args, list(Sn = 0.9, Qn = 0.8))
+    ),
+    "Sn.*less than or equal to.*Qn"
+  )
+  expect_error(
     do.call(
       survival_adapt,
       modifyList(common_args, list(prior_surv = c(-0.1, 0.1)))
@@ -752,6 +1020,20 @@ test_that("survival_adapt validates probability, count, and prior arguments", {
   expect_error(
     do.call(survival_adapt, modifyList(common_args, list(N_mcmc = 1.5))),
     "N_mcmc"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(common_args, list(mc_conf_level = 0.5))
+    ),
+    "greater than 0.5 and less than 1"
+  )
+  expect_error(
+    do.call(
+      survival_adapt,
+      modifyList(common_args, list(mc_conf_level = 1))
+    ),
+    "mc_conf_level"
   )
   expect_error(
     do.call(survival_adapt, modifyList(common_args, list(N_total = 200.5))),
@@ -794,6 +1076,61 @@ test_that("prior_surv_final defaults exactly to prior_surv", {
   expect_identical(from_default, from_explicit)
 })
 
+test_that("survival_adapt reports arm-specific prior and posterior diagnostics", {
+  set.seed(8893)
+  out <- survival_adapt(
+    hazard_treatment = c(0.02, 0.01),
+    hazard_control = c(0.03, 0.015),
+    cutpoints = 6,
+    N_total = 20,
+    lambda = 10,
+    interim_look = 10,
+    end_of_study = 12,
+    prior_surv = list(
+      treatment = rbind(shape = c(5, 6), rate = c(10, 12)),
+      control = c(2, 4)
+    ),
+    prior_surv_final = list(
+      control = c(3, 6),
+      treatment = c(7, 14)
+    ),
+    alternative = "less",
+    Fn = 0,
+    Sn = 1,
+    N_impute = 2,
+    N_mcmc = 2,
+    method = "bayes-surv",
+    return_trace = TRUE
+  )
+
+  expect_s3_class(out, "goldilocks_trial")
+  expect_identical(out$prior_diagnostics, attr(out, "prior_design"))
+  expect_identical(
+    out$prior_diagnostics$stage,
+    rep(c("interim", "final"), each = 4)
+  )
+  expect_identical(
+    out$prior_diagnostics$arm,
+    rep(rep(c("control", "treatment"), each = 2), 2)
+  )
+  expect_equal(
+    out$prior_diagnostics$shape[out$prior_diagnostics$stage == "interim"],
+    c(2, 2, 5, 6)
+  )
+  expect_gt(nrow(out$posterior_diagnostics), 0)
+  expect_setequal(out$posterior_diagnostics$arm, c("control", "treatment"))
+  expect_equal(
+    out$posterior_diagnostics$posterior_shape,
+    out$posterior_diagnostics$prior_shape +
+      out$posterior_diagnostics$effective_events
+  )
+  expect_equal(
+    out$posterior_diagnostics$posterior_rate,
+    out$posterior_diagnostics$prior_rate +
+      out$posterior_diagnostics$effective_exposure
+  )
+})
+
 test_that("the final survival prior is independent of the interim prior", {
   common_args <- list(
     hazard_treatment = c(0.02, 0.01),
@@ -822,6 +1159,12 @@ test_that("the final survival prior is independent of the interim prior", {
     c(common_args, list(prior_surv = c(100, 100)))
   )
 
+  attr(weak_interim, "arguments") <- NULL
+  attr(strong_interim, "arguments") <- NULL
+  # The resolved interim prior is intentionally retained as metadata. Compare
+  # the analysis result after removing metadata that should differ here.
+  attr(weak_interim, "prior_design") <- NULL
+  attr(strong_interim, "prior_design") <- NULL
   expect_identical(weak_interim, strong_interim)
 })
 
@@ -917,31 +1260,244 @@ test_that("survival_adapt keeps futility disabled when Fn = 0", {
 
   expect_s3_class(out, "data.frame")
   expect_equal(out$stop_futility, 0)
+  expect_identical(attr(out, "decision_design")$Qn, c(1, 1))
+})
+
+test_that("survival_adapt can declare immediate success from Pn", {
+  set.seed(1)
+  out <- survival_adapt(
+    hazard_treatment = -log(0.85) / 36,
+    hazard_control = -log(0.7) / 36,
+    N_total = 40,
+    lambda = 20,
+    interim_look = 20,
+    end_of_study = 36,
+    alternative = "two.sided",
+    Fn = 0,
+    Sn = 0,
+    prob_ha = 0,
+    N_impute = 2,
+    N_mcmc = 2,
+    return_trace = TRUE,
+    Qn = 0
+  )
+
+  expect_equal(out$summary$stop_immediate_success, 1)
+  expect_equal(out$summary$stop_expected_success, 0)
+  expect_equal(out$summary$stop_futility, 0)
+  expect_true(out$summary$trial_success)
+  expect_identical(out$summary$stopping_reason, "immediate_success")
+  expect_equal(out$summary$decision_time, out$trace$calendar_time)
+  expect_lt(out$summary$decision_time, out$summary$analysis_ready_time)
+  expect_identical(out$trace$decision, "stop_immediate_success")
+  expect_true(out$trace$immediate_success_crossed)
+  expect_false(out$trace$expected_success_crossed)
+  expect_identical(attr(out, "decision_design")$Qn, 0)
+})
+
+test_that("terminal interim decisions remain official without a final result", {
+  common_args <- list(
+    hazard_treatment = 0.0001,
+    hazard_control = 0.0001,
+    N_total = 20,
+    lambda = 100,
+    interim_look = 10,
+    end_of_study = 1,
+    block = 2,
+    rand_ratio = c(control = 1, treatment = 1),
+    prop_loss = 0,
+    alternative = "two.sided",
+    N_impute = 1,
+    N_mcmc = 1,
+    method = "logrank",
+    return_trace = TRUE
+  )
+
+  set.seed(2)
+  immediate <- do.call(
+    survival_adapt,
+    c(common_args, list(Fn = 0, Sn = 0, Qn = 0, prob_ha = 0))
+  )
+  expect_equal(immediate$summary$stop_immediate_success, 1)
+  expect_true(immediate$summary$trial_success)
+  expect_true(is.na(immediate$summary$post_prob_ha))
+  expect_true(is.na(immediate$summary$est_final))
+
+  set.seed(3)
+  futile <- do.call(
+    survival_adapt,
+    c(common_args, list(Fn = 1, Sn = 1, Qn = 1, prob_ha = 0.999))
+  )
+  expect_equal(futile$summary$stop_futility, 1)
+  expect_false(futile$summary$trial_success)
+  expect_true(is.na(futile$summary$post_prob_ha))
+  expect_true(is.na(futile$summary$est_final))
+
+  set.seed(12)
+  high_loss <- survival_adapt(
+    hazard_treatment = 0.1,
+    hazard_control = 0.1,
+    N_total = 20,
+    lambda = 100,
+    interim_look = 10,
+    end_of_study = 1,
+    block = 2,
+    rand_ratio = c(control = 1, treatment = 1),
+    prop_loss = 0.99,
+    alternative = "less",
+    Fn = 0,
+    Sn = 0,
+    Qn = 0,
+    prob_ha = 0,
+    N_impute = 2,
+    N_mcmc = 2,
+    method = "bayes-bin",
+    bin_method = "quadrature",
+    imputed_final = FALSE,
+    return_trace = TRUE
+  )
+  expect_equal(high_loss$summary$stop_immediate_success, 1)
+  expect_true(high_loss$summary$trial_success)
+  expect_true(is.na(high_loss$summary$post_prob_ha))
+  expect_true(is.na(high_loss$summary$est_final))
+})
+
+test_that("survival_adapt applies Qn separately at each interim look", {
+  set.seed(7622)
+  out <- survival_adapt(
+    hazard_treatment = -log(0.85) / 36,
+    hazard_control = -log(0.7) / 36,
+    N_total = 40,
+    lambda = 20,
+    interim_look = c(20, 30),
+    end_of_study = 36,
+    alternative = "less",
+    Fn = 0,
+    Sn = c(1, 0),
+    Qn = c(1, 0),
+    prob_ha = 0,
+    N_impute = 2,
+    N_mcmc = 2,
+    method = "bayes-bin",
+    return_trace = TRUE
+  )
+
+  expect_identical(
+    out$trace$decision,
+    c(
+      "continue",
+      "stop_immediate_success"
+    )
+  )
+  expect_identical(out$trace$immediate_success_threshold, c(1, 0))
+  expect_identical(attr(out, "decision_design")$Qn, c(1, 0))
+})
+
+test_that("Qn = 1 preserves disabled-rule results and RNG use", {
+  args <- list(
+    hazard_treatment = -log(0.85) / 36,
+    hazard_control = -log(0.7) / 36,
+    N_total = 40,
+    lambda = 20,
+    interim_look = 20,
+    end_of_study = 36,
+    alternative = "two.sided",
+    Fn = 0.05,
+    Sn = 0.9,
+    prob_ha = 0.975,
+    N_impute = 2,
+    N_mcmc = 2
+  )
+
+  set.seed(1)
+  default <- do.call(survival_adapt, args)
+  seed_after_default <- .Random.seed
+  set.seed(1)
+  explicit <- do.call(survival_adapt, c(args, list(Qn = 1)))
+  seed_after_explicit <- .Random.seed
+
+  expect_identical(default, explicit)
+  expect_identical(seed_after_default, seed_after_explicit)
 })
 
 test_that("error-prob-thresholds-length_v2", {
+  args <- list(
+    hazard_treatment = -log(0.85) / 36,
+    hazard_control = -log(0.7) / 36,
+    cutpoints = NULL,
+    N_total = 400,
+    lambda = 20,
+    lambda_time = NULL,
+    interim_look = c(100, 200),
+    end_of_study = 36,
+    prior_surv = c(0.1, 0.1),
+    block = 2,
+    rand_ratio = c(1, 1),
+    prop_loss = 0.30,
+    alternative = "two.sided",
+    h0 = 0,
+    prob_ha = 0.975,
+    N_impute = 2,
+    N_mcmc = 2,
+    method = "logrank"
+  )
+
   expect_error(
-    out <- survival_adapt(
-      hazard_treatment = -log(0.85) / 36,
-      hazard_control = -log(0.7) / 36,
-      cutpoints = NULL,
-      N_total = 400,
-      lambda = 20,
-      lambda_time = NULL,
-      interim_look = c(100, 200),
-      end_of_study = 36,
-      prior_surv = c(0.1, 0.1),
-      block = 2,
-      rand_ratio = c(1, 1),
-      prop_loss = 0.30,
-      alternative = "two.sided",
-      h0 = 0,
-      Fn = c(0.05, 0.05, 0.05),
-      Sn = c(0.99, 0.99, 0.99),
-      prob_ha = 0.975,
-      N_impute = 2,
-      N_mcmc = 2,
-      method = "logrank"
-    )
+    do.call(survival_adapt, c(args, list(Sn = rep(0.99, 3)))),
+    "'Sn' has too many values"
+  )
+  expect_error(
+    do.call(survival_adapt, c(args, list(Sn = 0.9, Qn = rep(0.99, 3)))),
+    "'Qn' has too many values"
+  )
+  expect_error(
+    do.call(survival_adapt, c(args, list(Fn = rep(0.05, 3), Sn = 0.9))),
+    "'Fn' has too many values"
+  )
+})
+
+test_that("interim thresholds use a scalar-or-exact-length contract", {
+  expect_equal(
+    normalize_interim_threshold(0.9, 4, "Sn"),
+    rep(0.9, 4)
+  )
+  expect_equal(
+    normalize_interim_threshold(c(0.95, 0.9, 0.85, 0.8), 4, "Sn"),
+    c(0.95, 0.9, 0.85, 0.8)
+  )
+  expect_equal(
+    normalize_interim_threshold(1, 4, "Qn"),
+    rep(1, 4)
+  )
+  expect_equal(
+    normalize_interim_threshold(NULL, 4, "Fn", null_disables = TRUE),
+    rep(0, 4)
+  )
+  expect_equal(normalize_interim_threshold(0.9, 0, "Sn"), numeric())
+
+  expect_error(
+    normalize_interim_threshold(c(0.9, 0.8), 4, "Sn"),
+    "'Sn' has too few values: expected 1 or 4.*observed 2"
+  )
+  expect_error(
+    normalize_interim_threshold(rep(0.9, 5), 4, "Sn"),
+    "'Sn' has too many values: expected 1 or 4.*observed 5"
+  )
+  expect_error(
+    normalize_interim_threshold(c(0.1, 0.2, 0.3), 4, "Fn"),
+    "'Fn' has too few values: expected 1 or 4.*observed 3"
+  )
+  expect_error(
+    normalize_interim_threshold(numeric(), 4, "Fn"),
+    "'Fn' has too few values: expected 1 or 4.*observed 0"
+  )
+
+  expect_true(validate_success_threshold_order(
+    c(0.9, 0.95),
+    c(0.9, 1)
+  ))
+  expect_error(
+    validate_success_threshold_order(c(0.9, 0.95), c(1, 0.9)),
+    "look\\(s\\): 2"
   )
 })

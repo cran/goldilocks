@@ -1,82 +1,73 @@
 ## ----include = FALSE----------------------------------------------------------
+source("shared-vignette-resources.R")
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 
-## ----echo = FALSE, fig.width = 8, fig.height = 8, fig.alt = "Diagram showing the function call dependencies in the goldilocks package."----
+## ----echo = FALSE, fig.width = 10, fig.height = 6.2, fig.alt = "Flowchart linking trial assumptions, simulated or observed interim data, posterior prediction, adaptive decisions, final analysis, and operating characteristics."----
 DiagrammeR::grViz("
-digraph goldilocks {
+digraph statistical_workflow {
+  graph [rankdir = TB, fontsize = 12, nodesep = 0.32, ranksep = 0.48]
+  node [shape = box, style = 'filled,rounded', fontname = Helvetica,
+        fontsize = 10, fillcolor = '#f5f5f5', color = '#777777']
+  edge [fontname = Helvetica, fontsize = 9, color = '#666666']
 
-  graph [rankdir = TB, fontsize = 12, nodesep = 0.4, ranksep = 0.6]
+  assumptions [label = 'Prespecified assumptions\nendpoint, accrual, treatment effect, missingness',
+               fillcolor = '#dae8fc', color = '#6c8ebf']
+  simulated [label = 'Simulated trial data']
+  observed [label = 'Observed interim data cut']
+  posterior [label = 'Posterior distribution of event-time hazards']
+  current [label = 'Predict success after follow-up\nof currently enrolled participants']
+  maximum [label = 'Predict success after enrollment\nto the maximum sample size']
+  decision [label = 'Apply Qn, Sn, and Fn\nimmediate success / expected success / futility / continue',
+            fillcolor = '#fff2cc', color = '#d6b656']
+  final [label = 'Prespecified final analysis\nwhen required']
+  repeated [label = 'Repeat under null and alternative scenarios']
+  oc [label = 'Operating characteristics\ntype I error, power, stopping, sample size, duration',
+      fillcolor = '#d5e8d4', color = '#82b366']
 
-  node [shape = box, style = 'filled, rounded', fontname = Helvetica, fontsize = 10]
+  assumptions -> simulated
+  assumptions -> posterior [style = dashed, label = 'analysis priors']
+  simulated -> posterior [label = 'interim data']
+  observed -> posterior
+  posterior -> current
+  posterior -> maximum
+  current -> decision
+  maximum -> decision
+  decision -> final [label = 'expected success or maximum N']
+  decision -> repeated [label = 'terminal trial result']
+  final -> repeated
+  repeated -> oc
+}
+")
 
-  # Exported functions (blue)
-  sim_trials       [label = 'sim_trials()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  survival_adapt   [label = 'survival_adapt()',   fillcolor = '#dae8fc', color = '#6c8ebf']
-  summarise_sims   [label = 'summarise_sims()',   fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_enrollment  [label = 'plot_enrollment()',  fillcolor = '#dae8fc', color = '#6c8ebf']
-  summarise_trial_trace [label = 'summarise_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_trial_trace [label = 'plot_trial_trace()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_stopping [label = 'plot_sim_stopping()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_ocs      [label = 'plot_sim_ocs()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  plot_sim_decisions [label = 'plot_sim_decisions()', fillcolor = '#dae8fc', color = '#6c8ebf']
-  sim_comp_data    [label = 'sim_comp_data()',    fillcolor = '#dae8fc', color = '#6c8ebf']
-  enrollment       [label = 'enrollment()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  randomization    [label = 'randomization()',    fillcolor = '#dae8fc', color = '#6c8ebf']
-  pwe_sim          [label = 'pwe_sim()',          fillcolor = '#dae8fc', color = '#6c8ebf']
-  pwe_impute       [label = 'pwe_impute()',       fillcolor = '#dae8fc', color = '#6c8ebf']
-  ppwe             [label = 'ppwe()',             fillcolor = '#dae8fc', color = '#6c8ebf']
-  prop_to_haz      [label = 'prop_to_haz()',      fillcolor = '#dae8fc', color = '#6c8ebf']
+## ----echo = FALSE, fig.width = 10, fig.height = 4.6, fig.alt = "Flowchart linking a single trial, repeated simulations, or an observed interim analysis to the corresponding summaries and graphical assessments."----
+DiagrammeR::grViz("
+digraph summaries {
+  graph [rankdir = LR, fontsize = 12, nodesep = 0.28, ranksep = 0.45]
+  node [shape = box, style = 'filled,rounded', fontname = Helvetica,
+        fontsize = 9, fillcolor = '#f5f5f5', color = '#777777']
+  edge [fontname = Helvetica, fontsize = 8, color = '#666666']
 
-  # Internal functions (grey)
-  test_stop_success [label = 'test_stop_success()', fillcolor = '#f5f5f5', color = '#999999']
-  test_final        [label = 'test_final()',         fillcolor = '#f5f5f5', color = '#999999']
-  analyse_data      [label = 'analyse_data()',       fillcolor = '#f5f5f5', color = '#999999']
-  bayes_binomial_test [label = 'bayes_binomial_test()', fillcolor = '#f5f5f5', color = '#999999']
-  impute_data       [label = 'impute_data()',        fillcolor = '#f5f5f5', color = '#999999']
-  posterior          [label = 'posterior()',           fillcolor = '#f5f5f5', color = '#999999']
-  haz_to_prop       [label = 'haz_to_prop()',        fillcolor = '#f5f5f5', color = '#999999']
-  logrank_test      [label = 'logrank_test()',        fillcolor = '#f5f5f5', color = '#999999']
+  one [label = 'One simulated trial\nsurvival_adapt()',
+       fillcolor = '#dae8fc', color = '#6c8ebf']
+  many [label = 'Repeated simulated trials\nsim_trials()',
+        fillcolor = '#dae8fc', color = '#6c8ebf']
+  observed [label = 'Observed interim data\nevaluate_interim()',
+            fillcolor = '#dae8fc', color = '#6c8ebf']
 
-  # Edges
-  sim_trials      -> survival_adapt
-  sim_trials      -> summarise_sims  [style = dashed, label = 'output list']
-  sim_trials      -> plot_sim_stopping [style = dashed, label = 'simulation output']
-  sim_trials      -> plot_sim_decisions [style = dashed, label = 'simulation traces']
-  sim_trials      -> plot_enrollment [style = dashed, label = 'stored design']
-  summarise_sims  -> plot_sim_ocs [style = dashed, label = 'scenario summaries']
+  trace [label = 'Interim decision history\nsummarise_trial_trace() / plot_trial_trace()']
+  enrollment [label = 'Enrollment and calendar time\nplot_enrollment() / summarise_calendar_time()']
+  oc [label = 'Operating characteristics\nsummarise_sims() / plot_sim_ocs()']
+  stopping [label = 'Stopping and decision regions\nplot_sim_stopping() / plot_sim_decisions()']
 
-  survival_adapt  -> sim_comp_data
-  survival_adapt  -> posterior
-  survival_adapt  -> test_stop_success
-  survival_adapt  -> test_final
-  survival_adapt  -> summarise_trial_trace [style = dashed, label = 'optional trace']
-  survival_adapt  -> plot_trial_trace [style = dashed, label = 'optional trace']
-  survival_adapt  -> plot_enrollment [style = dashed, label = 'stored design']
-
-  sim_comp_data   -> enrollment
-  sim_comp_data   -> randomization
-  sim_comp_data   -> pwe_sim
-
-  test_stop_success -> impute_data
-  test_stop_success -> analyse_data
-
-  test_final      -> posterior
-  test_final      -> impute_data
-  test_final      -> analyse_data
-
-  analyse_data    -> posterior
-  analyse_data    -> haz_to_prop
-  analyse_data    -> bayes_binomial_test
-  analyse_data    -> logrank_test
-
-  haz_to_prop     -> ppwe
-  prop_to_haz     -> sim_comp_data [style = dashed, label = 'hazard inputs']
-
-  impute_data     -> pwe_impute
-  impute_data     -> pwe_sim
+  one -> trace
+  one -> enrollment
+  observed -> trace
+  many -> enrollment
+  many -> oc
+  many -> stopping
 }
 ")
 

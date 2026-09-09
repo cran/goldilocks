@@ -23,6 +23,13 @@ library(goldilocks)
 
 Two distinct kinds of prior can therefore enter a Bayesian binary design. `prior_surv` is the Gamma prior on piecewise-exponential hazards used for interim predictive imputation, and `prior_surv_final` optionally overrides it for final imputation. `prior_bin` is the Beta prior on the binary endpoint event probability in each arm and is used to analyze every completed or imputed dataset. Thus, interim predictive probabilities are affected by `prior_surv` and `prior_bin`; a final imputed analysis uses `prior_surv_final` and `prior_bin`; and a non-imputed final binary analysis is affected by `prior_bin` alone.
 
+The imputation and completed-data analysis are separate models. The piecewise-exponential Gamma model uses event times and available event-free follow-up to predict pending endpoint statuses. The beta-binomial model then analyzes the completed event indicators at `end_of_study`. `prior_bin` is not derived from the binary-horizon distribution implied by `prior_surv`, and `goldilocks` does not treat the two stages as one joint Bayesian model. This modular combination may be intentional, but its operating characteristics can depend on both prior specifications whenever outcomes require imputation. Choosing `binary_imputation = "bernoulli"` rather than `"event-time"` does not remove the distinction: both options use the same piecewise-exponential prediction model.
+
+The saved analysis specification records `prior_surv`, `prior_surv_final`,
+`prior_bin`, and `end_of_study`, together with the Gamma prior parameters by
+analysis stage, arm, and interval. These values should be included in the
+simulation report because both prior families can affect interim decisions.
+
 For the examples below, we use the default weakly informative $\operatorname{Gamma}(0.1, 0.1)$ hazard prior and a uniform $\operatorname{Beta}(1, 1)$ binary-endpoint prior:
 
 ```{r priors}
@@ -34,6 +41,14 @@ Two practical consequences follow:
 
 -   `method = "bayes-bin"` only supports one-sided alternatives: `alternative = "less"` or `alternative = "greater"`.
 -   The final binary analysis requires complete endpoint status. Subjects who are censored before `end_of_study` must be imputed (`imputed_final = TRUE`) or, if `imputed_final = FALSE`, excluded from the final binary analysis.
+
+The examples use `prop_loss = 0`. If dropout is added, `prop_loss` specifies
+the CDF of an independent exponential dropout time at `end_of_study`, not an
+exact fraction of missing binary outcomes. Events occurring before dropout
+remain observed. Consequently, excluding early-censored subjects can bias
+binary event probabilities even though censoring is independent for survival
+analysis. Assess final imputation and its event-time-model assumptions when
+evaluating binary designs with dropout.
 
 ## Two-arm design
 
@@ -61,7 +76,7 @@ two_arm_args <- list(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0,
   alternative = "less",
   h0 = 0,
@@ -77,7 +92,10 @@ out_two_arm <- do.call(survival_adapt, two_arm_args)
 out_two_arm
 ```
 
-The output has the same structure as other `survival_adapt()` analyses. For `method = "bayes-bin"`, `est_final` is the posterior mean binary effect: the treatment event probability minus the control event probability. The `post_prob_ha` value is the posterior probability that this difference is below `h0` when `alternative = "less"`.
+For `method = "bayes-bin"`, `est_final` is the posterior mean binary effect:
+the treatment event probability minus the control event probability.
+`post_prob_ha` is the posterior probability that this difference is below
+`h0` when `alternative = "less"`.
 
 ## Choosing the binary imputation approach
 
@@ -96,7 +114,10 @@ $$
 
 It then draws \(X \sim \operatorname{Bernoulli}(p)\). For subjects who are not yet enrolled, \(T=0\). Observed events are not imputed. Each completed dataset still uses a sampled posterior hazard, so both approaches retain uncertainty in the predictive piecewise-exponential model.
 
-The approaches have the same endpoint distribution. They can nevertheless produce different Monte Carlo realizations if their random-number streams differ, so operating characteristics should be compared using enough trials and imputations. The following small seeded comparison uses the same design and random-number stream:
+The two approaches imply the same endpoint distribution. Finite Monte Carlo
+estimates can nevertheless differ, so comparisons should use adequate numbers
+of trials and imputations. The following small comparison uses a common seed to
+make the numerical results reproducible:
 
 ```{r compare_binary_imputation}
 compare_binary_imputation <- function(imputation) {
@@ -114,7 +135,15 @@ rbind(
 )
 ```
 
-The direct Bernoulli calculation is also more stable in extreme tails because it evaluates the remaining cumulative hazard through `-expm1(-(H(T^*) - H(T)))`, rather than subtracting two survival probabilities that may both round to zero.
+The direct Bernoulli calculation can also be more numerically stable for very
+small survival probabilities because it works from the remaining cumulative
+hazard rather than subtracting two nearly zero survival probabilities.
+
+Whichever imputation approach is selected, the completed beta-binomial
+analysis depends only on the event count and denominator in each arm. With
+`bin_method = "mc"`, each predictive replicate receives an independent set of
+`N_mcmc` beta-posterior draws. Thus, the number of predictive imputations and
+the number of posterior draws represent distinct sources of Monte Carlo error.
 
 ## Single-arm design
 
@@ -160,14 +189,22 @@ In this setting `est_final` is the posterior mean event probability in the singl
 The posterior probability can be calculated in three ways:
 
 -   `bin_method = "mc"` draws from the beta posterior directly. Use `N_mcmc` to control the number of Monte Carlo draws.
--   `bin_method = "normal"` uses a normal approximation to the posterior mean or treatment-control difference.
+-   `bin_method = "normal"` approximates the posterior event probability or treatment-control difference by a normal distribution with matching mean and variance.
 -   `bin_method = "quadrature"` uses numerical integration for the two-arm posterior difference, and the closed-form beta CDF for single-arm designs.
 
 The Monte Carlo method has simulation error, controlled by `N_mcmc`. Quadrature is deterministic (up to numerical integration for a two-arm design) and is a useful high-accuracy default when it is computationally feasible. The normal approximation is fastest in a representative two-arm benchmark, but should be used with care when sample sizes are small or event probabilities are near 0 or 1.
 
+Approximation error can move the posterior probability across `prob_ha`,
+changing success and interim stopping decisions. Increasing `N_mcmc` does not
+correct normal-approximation error. Use `bin_method = "quadrature"` or
+sufficiently precise Monte Carlo Beta draws when the approximation is unsuitable.
+
 ## Operating characteristics
 
-As with the survival methods, operating characteristics should be evaluated by simulation. The `seed` argument makes the simulation reproducible, including when `ncores` is greater than 1. With `backend = "auto"`, `sim_trials()` uses forked workers on Unix-like platforms and PSOCK workers on Windows.
+As with the survival methods, operating characteristics should be evaluated by
+simulation under clinically relevant null and alternative scenarios. The
+`seed` argument makes the Monte Carlo study reproducible, including when
+`ncores` is greater than 1.
 
 ```{r oc, eval=FALSE}
 out_power <- sim_trials(
@@ -184,7 +221,7 @@ out_power <- sim_trials(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0,
   alternative = "less",
   h0 = 0,
@@ -202,10 +239,14 @@ out_power <- sim_trials(
 out_null <- update(out_power, hazard_treatment = hc, seed = 5108)
 
 oc <- summarise_sims(list(
-  "target: treatment event probability 25%" = out_power$sims,
-  "null: treatment event probability 35%" = out_null$sims
+  "target: treatment event probability 25%" = out_power,
+  "null: treatment event probability 35%" = out_null
 ))
-oc$true_treatment_event_probability <- c(0.25, 0.35)
+effect_by_scenario <- c(
+  "target: treatment event probability 25%" = 0.25,
+  "null: treatment event probability 35%" = 0.35
+)
+oc$true_treatment_event_probability <- unname(effect_by_scenario[oc$scenario])
 
 oc
 plot_sim_ocs(
@@ -221,6 +262,7 @@ These plots separate three complementary questions: how operating
 characteristics change with the true binary event probability, where enrollment
 stops within one scenario, and how the pair of predictive probabilities drives
 each interim decision. Set `return_trace = TRUE` only for scenarios where the
-decision map is needed; it does not change the compact `sims` summary.
+decision map is needed; it does not change the estimated operating
+characteristics.
 
 The binary endpoint model is still calibrated through the event-time simulator. When the binary endpoint corresponds to event status by `end_of_study`, choose hazards that reproduce clinically meaningful endpoint probabilities through `prop_to_haz()` and `ppwe()`.

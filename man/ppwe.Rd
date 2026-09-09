@@ -2,30 +2,38 @@
 % Please edit documentation in R/pwe.R
 \name{ppwe}
 \alias{ppwe}
-\title{Cumulative distribution function of the PWE for a vectorized hazard
-rate parameter}
+\title{Calculate endpoint event probabilities from piecewise hazards}
 \usage{
 ppwe(hazard, end_of_study, cutpoints = NULL)
 }
 \arguments{
-\item{hazard}{matrix. A matrix of hazard rate parameters with number of
-columns one greater than the length of the \code{cutpoints} vector. The number
-of rows can be anything, and is typically dictated by the number of MCMC
-draws.}
+\item{hazard}{A required numeric matrix of finite, non-negative hazard rates.
+Rows represent parameter sets, such as posterior draws, and columns
+represent the intervals defined by \code{cutpoints}. The number of columns must
+equal \code{length(cutpoints) + 1}, and at least one row is required.}
 
-\item{end_of_study}{finite positive time at which the cumulative event
-probability is evaluated. It must be greater than every cutpoint.}
+\item{end_of_study}{A required single finite, positive numeric time at which
+the cumulative event probability is evaluated. It must be greater than
+every cutpoint.}
 
-\item{cutpoints}{finite, positive, strictly increasing vector of interior
-times at which the hazard rate changes. The number of hazard rates must be
-one greater than the number of cutpoints. Use \code{NULL} for a constant hazard.}
+\item{cutpoints}{\code{NULL} (the default), or a numeric vector of finite,
+positive, strictly increasing interior times at which the hazard rate
+changes. The number of hazard rates must be one greater than the number of
+cutpoints. Use \code{NULL} for a constant hazard.}
 }
 \value{
-A vector of (0, 1) probabilities from evaluation of the PWE
-cumulative distribution function. Length of the vector matches the number
-of rows of the \code{hazard} matrix parameter.
+A numeric vector of event probabilities in \verb{[0, 1]}, with one value
+for each row of \code{hazard}.
 }
 \description{
-Extends \code{\link[PWEALL:pwe]{PWEALL::pwe()}} to allow for vectorization over the
-hazard rates.
+Calculates the cumulative event probability at a fixed follow-up
+time for one or more sets of piecewise-constant hazard rates.
+}
+\details{
+The cumulative probability depends on interval durations, so the
+value assigned to an isolated cutpoint has no effect. PWEALL represents its
+generating hazard with pieces closed on the left and open on the right.
+When \code{goldilocks} assigns realized event times to analysis intervals, it
+instead uses the survival counting-process convention, open on the left and
+closed on the right.
 }

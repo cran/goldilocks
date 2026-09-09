@@ -10,8 +10,7 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>",
-  cache.path = "single-arm-cache/"
+  comment = "#>"
 )
 set.seed(3081)
 ```
@@ -25,13 +24,16 @@ Several other vignettes focus on two-arm randomized designs, although the Bayesi
 Two practical constraints on single-arm designs in this package:
 
 -   A single-arm trial is signaled by setting `hazard_control = NULL`.
--   `method = "bayes-surv"` supports single-arm survival analyses with piecewise-exponential event-time modeling. `method = "bayes-bin"` supports single-arm analyses of complete binary outcomes. The frequentist methods (`logrank`, `cox`, `riskdiff`) require two arms and will raise an error if used in this mode.
+-   `method = "bayes-surv"` supports single-arm survival analyses with piecewise-exponential event-time modeling. `method = "bayes-bin"` supports single-arm analyses of complete binary outcomes. The frequentist methods (`logrank`, `cox`, `rmst`, `riskdiff-wald`, and `riskdiff-fm`) require two arms and will raise an error if used in this mode.
 
 ## The decision rule
 
-In a single-arm trial there is no concurrent control, so the "treatment effect" is replaced by the cumulative event probability on the treatment arm itself:
+In a single-arm trial there is no concurrent control, so the estimand is the
+cumulative event probability in the treatment arm. Let $\tau$ denote
+`end_of_study`:
 
-$\text{effect} \;=\; p_{\text{treatment}} \;=\; \Pr(\text{event by end\_of\_study} \mid \text{data}).$
+$$p_{\text{treatment}}
+  = \Pr(\text{event by } \tau \mid \text{data}).$$
 
 The argument `h0` plays the role of a benchmark on this scale: a target failure probability (or, equivalently, $1 - h_0$ is a target survival probability) drawn from external evidence such as a published rate, registry, or historical cohort. In clinical-trial terminology this benchmark may be referred to as a performance goal (PG) or objective performance criterion (OPC). With `alternative = "less"` and `prob_ha`, the trial declares success when
 
@@ -39,7 +41,19 @@ $$\Pr(p_{\text{treatment}} < h_0 \mid \text{data}) \;>\; \texttt{prob\_ha},$$
 
 i.e. when the posterior assigns enough mass to "the experimental therapy has a lower failure rate than the benchmark". Choosing `alternative = "greater"` reverses the direction; `alternative = "two.sided"` is not allowed for `method = "bayes-surv"`.
 
-The same posterior is used at each interim look to compute the predictive probability of eventual success, which drives the futility (`Fn`) and expected-success (`Sn`) stopping rules. Predictive probabilities are obtained by imputing remaining follow-up from the posterior predictive distribution of the (piecewise-)exponential model and re-evaluating the success criterion on each completed dataset.
+At each interim look, `prior_surv` is updated with observed events and exposure
+to predict remaining follow-up. Each hypothetical completed dataset is then
+analyzed with `prior_surv_final`, the prior used for the actual final Bayesian
+survival analysis. The fraction that passes the posterior success threshold
+drives the futility (`Fn`) and expected-success (`Sn`) stopping rules. The
+default `Qn = 1` disables the optional immediate-success rule in these examples.
+
+The default `prior_surv_final = prior_surv` uses the same prior for prediction
+and analysis. To bring external evidence into prediction while using a weak
+analysis prior, specify both explicitly. `h0` remains the fixed performance
+goal; it is separate from either prior. See the
+[observed-interim example](interim-data.html#using-separate-predictive-and-analysis-priors)
+for a worked specification of the two prior roles.
 
 ## Setting up the design
 
@@ -55,9 +69,15 @@ ht <- prop_to_haz(probs = target, endtime = end_of_study)
 ht
 ```
 
+We set `prop_loss = 0.05`: independently of event time, dropout time is
+exponential with rate $-\log(0.95)/24$ per month, giving a 5% dropout CDF
+at 24 months. The observed proportion censored by dropout can be lower because
+events can occur first; it is not a fixed count of four losses among 80
+participants. Survival analyses retain the follow-up observed before dropout.
+
 Now we run `survival_adapt()`:
 
-```{r run, cache=TRUE}
+```{r run}
 out <- survival_adapt(
   hazard_treatment = ht,
   hazard_control   = NULL,              # single-arm
@@ -83,7 +103,7 @@ out
 
 There is no need to supply `block` or `rand_ratio`: they are redundant in a single-arm design because no randomization is performed.
 
-A few points to highlight in the output:
+The principal trial-level quantities are:
 
 -   `N_control = 0`: no concurrent control was simulated.
 -   `margin = 0.30`: this is the value of `h0` that the trial is testing against. Note that it is on the cumulative-failure scale, not the survival scale.
@@ -92,7 +112,10 @@ A few points to highlight in the output:
 
 ## Operating characteristics
 
-A single trial does not tell you whether the design is well-calibrated. To estimate power and type I error, we run the design under each scenario using `sim_trials()`. The chunks below are not run when knitting (each takes a few minutes) but illustrate the workflow:
+A single trial replicate does not establish whether the design is well
+calibrated. Power and type I error are estimated by repeated simulation under
+alternative and null scenarios, respectively. The following analyses are not
+evaluated in the vignette because they require several minutes:
 
 ```{r oc, eval=FALSE}
 # Power: simulate under the alternative (true rate = 0.20)
@@ -144,10 +167,14 @@ out_t1error <- sim_trials(
   seed             = 3083)
 
 oc <- summarise_sims(list(
-  "target event probability" = out_power$sims,
-  "benchmark event probability" = out_t1error$sims
+  "target event probability" = out_power,
+  "benchmark event probability" = out_t1error
 ))
-oc$true_event_probability <- c(target, benchmark)
+effect_by_scenario <- c(
+  "target event probability" = target,
+  "benchmark event probability" = benchmark
+)
+oc$true_event_probability <- unname(effect_by_scenario[oc$scenario])
 
 oc
 plot_sim_ocs(
@@ -166,7 +193,13 @@ traces to show how interim predictive probabilities fall relative to the
 expected-success and futility thresholds. For large calibration grids, retain
 traces only for scenarios whose interim behavior needs closer inspection.
 
-Calibration proceeds the same way as for two-arm designs: if the type I error under the null (where the true rate equals the benchmark) is above the desired level, raise `prob_ha`; if power is too low, increase `N_total` or relax the `Fn`/`Sn` thresholds.
+Calibration proceeds as for two-arm designs. Screen candidate `prob_ha` values
+under the null, where the true event probability equals the benchmark, and
+validate the selected design with a fresh seed and adequate Monte Carlo
+precision. If sample size or the stopping thresholds change to improve power,
+reassess type I error for the revised design. The
+[calibration vignette](calibrating-prob-ha.html) demonstrates this workflow;
+its log-rank threshold is specific to that example.
 
 ## A practical caveat on benchmarks
 
@@ -175,5 +208,5 @@ The validity of a single-arm Goldilocks trial rests entirely on the benchmark `h
 ## See also
 
 -   The "Two-arm randomized trials" vignette covers the corresponding two-arm randomized design with a log-rank decision rule.
--   The "Bayesian piecewise-exponential designs" vignette covers the same decision rule used here, but in a two-arm setting and with non-constant hazards. The piecewise machinery applies directly to single-arm trials too (just keep `hazard_control = NULL` and pass a per-interval `hazard_treatment` vector).
+-   The "Bayesian piecewise-exponential designs" vignette covers the same decision rule used here, but in a two-arm setting and with non-constant hazards. The same piecewise-exponential specification applies to single-arm trials when `hazard_control = NULL` and `hazard_treatment` contains one hazard per interval.
 -   `?survival_adapt` documents all arguments.

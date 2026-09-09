@@ -62,6 +62,24 @@ test_that("pool_rubin_scalar can use between-imputation variance alone", {
   expect_equal(pooled$estimate, 0)
 })
 
+test_that("pool_rubin_scalar rejects zero total variance in every direction", {
+  for (alternative in c("less", "greater", "two.sided")) {
+    for (h0 in c(-0.1, 0, 0.1)) {
+      expect_error(
+        pool_rubin_scalar(c(0, 0), c(0, 0), alternative, h0),
+        "non-estimable: total variance is zero",
+        class = "goldilocks_non_estimable"
+      )
+    }
+  }
+})
+
+test_that("pool_rubin_scalar retains small positive total variances", {
+  pooled <- pool_rubin_scalar(c(0, 0), c(1e-30, 1e-30), "less", 0)
+  expect_equal(pooled$std_error, 1e-15)
+  expect_equal(pooled$success, 0.5)
+})
+
 test_that("prior_surv_final controls final-stage imputation", {
   data_in <- data.frame(
     time = rep(0.1, 20),
@@ -70,7 +88,7 @@ test_that("prior_surv_final controls final-stage imputation", {
     subject_impute_success = TRUE
   )
   run_final <- function(prior_surv_final) {
-    test_final(
+    analyse_final(
       data_in = data_in,
       cutpoints = NULL,
       prior_surv_final = prior_surv_final,

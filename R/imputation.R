@@ -1,34 +1,39 @@
-#' @title Impute incomplete data set with event times conditional on observed
-#'   data
+#' @title Complete one data set from a posterior hazard draw
 #'
-#' @description Imputes the incomplete time-to-event data with event times from
-#'   a piecewise exponential model conditional on what is already observed. This
-#'   can be applied to any input data frame, whether for expected success,
-#'   futility, or final analysis imputation.
+#' @description Imputes incomplete time-to-event outcomes conditional on the
+#'   observed follow-up and one draw from the posterior hazard distribution.
+#'   This function remains the active calculation for final-analysis imputation
+#'   and provides the single-imputation reference calculation used in tests.
+#'   Interim analyses generate all predictive imputations together using
+#'   `impute_predictive_draws()`.
 #'
 #' @inheritParams survival_adapt
 #' @inheritParams sim_comp_data
 #' @inheritParams haz_to_prop
-#' @param data_in data frame. The time-to-event data that requires imputation,
-#'   with columns for treatment assignment (`treatment`, coded `1`
-#'   for treatment and `0` for control; single-arm designs use all 1s),
-#'   event time (`time`), event indicator (`event`), and indicators
-#'   of whether the subject requires imputation for expected success
-#'   (`subject_impute_success`) or futility (`subject_impute_futility`).
-#' @param hazard array. Hazard parameters for the piecewise exponential
-#'   distribution. This should be a single sample from a posterior distribution.
-#'   The single slice must have dimensions 1 (rows), \eqn{J} (columns), and 2
-#'   (third dimension, in order of treatment and control hazard slices).
-#' @param type character. Whether imputation is for `success` or `futility`.
-#' @param binary_imputation character. Whether to impute a conditional event
-#'   time (`"event-time"`) or draw the endpoint status directly
-#'   (`"bernoulli"`).
+#' @param data_in A data frame with one row per subject and columns for
+#'   treatment assignment (`treatment`, coded `1` for treatment and `0` for
+#'   control; single-arm designs use all 1s), event time (`time`), event
+#'   indicator (`event`), and indicators of whether the subject requires
+#'   imputation for expected success (`subject_impute_success`) or futility
+#'   (`subject_impute_futility`).
+#' @param hazard A three-dimensional numeric array containing one posterior draw
+#'   of the piecewise-exponential hazard rates. Its dimensions must be `1` by
+#'   \eqn{J} by `2`, where \eqn{J} is the number of intervals and the third
+#'   dimension contains treatment followed by control. The control values are
+#'   ignored for a single-arm design.
+#' @param type A required character string: `"success"` completes outcomes for
+#'   currently enrolled subjects, whereas `"futility"` simulates outcomes for
+#'   subjects who could be enrolled up to the maximum sample size.
+#' @param binary_imputation A character string specifying whether to impute a
+#'   conditional event time (`"event-time"`, the default) or draw the endpoint
+#'   event indicator directly (`"bernoulli"`).
 #'
-#' @details This function is not intended to be used outside of the main
-#'   simulation programs: [survival_adapt()] and [sim_trials()].
+#' @details This is an active internal function, not an archived function. It is
+#'   used by the final-analysis calculations in [survival_adapt()] and
+#'   [sim_trials()].
 #'
-#' @return A data frame with the same number of rows (number of subjects), but
-#'   with imputed event times.
+#' @return A data frame with the same rows and columns as `data_in`, with the
+#'   required `time` and `event` values replaced by imputed outcomes.
 #'
 #' @noRd
 impute_data <- function(

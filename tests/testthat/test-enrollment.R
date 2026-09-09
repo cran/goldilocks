@@ -17,10 +17,27 @@ test_that("constant-rate gaps have the exponential-process distribution", {
   set.seed(7413)
   rate <- 4
   gaps <- diff(enrollment(lambda = rate, N_total = 50000))
+  n <- length(gaps)
+  expected_mean <- 1 / rate
+  expected_variance <- 1 / rate^2
 
-  expect_lt(abs(mean(gaps) - 1 / rate), 0.004)
-  expect_lt(abs(sd(gaps) - 1 / rate), 0.004)
-  expect_lt(abs(mean(gaps <= log(2) / rate) - 0.5), 0.01)
+  expect_mc_close(
+    mean(gaps),
+    expected_mean,
+    sqrt(expected_variance / n),
+    "mean constant-rate enrollment gap"
+  )
+  expect_mc_close(
+    stats::var(gaps),
+    expected_variance,
+    gamma_variance_mcse(shape = 1, rate = rate, n = n),
+    "variance of constant-rate enrollment gaps"
+  )
+  expect_mc_rate(
+    gaps <= log(2) / rate,
+    target = 0.5,
+    estimand = "median constant-rate enrollment gap"
+  )
 })
 
 test_that("fractional internal knots follow the integrated intensity", {
@@ -40,8 +57,49 @@ test_that("fractional internal knots follow the integrated intensity", {
   expected_before_knot <- 1 - exp(-0.5 * 0.5)
   expected_after_knot <- 1 - exp(-(0.5 * 0.75 + 2 * (1 - 0.75)))
 
-  expect_lt(abs(mean(arrivals <= 0.5) - expected_before_knot), 0.01)
-  expect_lt(abs(mean(arrivals <= 1) - expected_after_knot), 0.01)
+  expect_mc_rate(
+    arrivals <= 0.5,
+    target = expected_before_knot,
+    estimand = "arrival probability before the enrollment-rate change"
+  )
+  expect_mc_rate(
+    arrivals <= 1,
+    target = expected_after_knot,
+    estimand = "arrival probability after the enrollment-rate change"
+  )
+})
+
+test_that("enrollment knots use open-left closed-right intervals", {
+  epsilon <- 1e-6
+  time <- c(
+    0,
+    5 - epsilon,
+    5,
+    5 + epsilon,
+    12 - epsilon,
+    12,
+    12 + epsilon
+  )
+
+  expect_identical(
+    right_closed_interval_index(time, c(0, 5, 12)),
+    c(0L, 1L, 1L, 2L, 2L, 2L, 3L)
+  )
+
+  intensity <- cumulative_enrollment_intensity(
+    time,
+    lambda = c(1, 2, 4),
+    lambda_time = c(5, 12)
+  )
+  expect_equal(
+    inverse_enrollment_intensity(
+      intensity,
+      lambda = c(1, 2, 4),
+      lambda_time = c(5, 12)
+    ),
+    time,
+    tolerance = 1e-12
+  )
 })
 
 test_that("enrollment supports multiple internal knots", {

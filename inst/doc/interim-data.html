@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Applying predictive decisions to an observed interim data cut</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Applying predictive decisions to an
+observed interim data cut</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(goldilocks)</span></code></pre></div>
+<p><code>survival_adapt()</code> simulates a complete adaptive trial.
+<code>evaluate_interim()</code> instead applies the same predictive
+decision calculation to one observed interim data cut. It does not
+generate event, censoring, or enrollment times, and it does not retain a
+participant-level copy of the input in its result.</p>
+<div id="preparing-the-data-cut" class="section level2">
+<h2>Preparing the data cut</h2>
+<p>The input has one row for every enrolled participant and uses a
+common time unit throughout. Calendar-time <code>enrollment</code> is
+measured from first participant randomization at time zero.
+Subject-level <code>time</code> is measured from that participant’s
+randomization.</p>
+<p>The status values make the reason for incomplete follow-up
+explicit:</p>
+<table>
+<thead>
+<tr class="header">
+<th><code>status</code></th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>event</code></td>
+<td>The endpoint event has been observed.</td>
+</tr>
+<tr class="even">
+<td><code>complete</code></td>
+<td>Event-free follow-up reached <code>end_of_study</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>pending</code></td>
+<td>The participant remains under follow-up.</td>
+</tr>
+<tr class="even">
+<td><code>censored</code></td>
+<td>Follow-up ended early without an event.</td>
+</tr>
+</tbody>
+</table>
+<p>A blinded data-management team can prepare enrollment, follow-up,
+event, and status fields without access to treatment assignments:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>blinded_cut <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">enrollment =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">7</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">7</span>, <span class="dv">6</span>, <span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">event =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>),</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">status =</span> <span class="fu">c</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="st">&quot;event&quot;</span>, <span class="st">&quot;pending&quot;</span>, <span class="st">&quot;censored&quot;</span>, <span class="st">&quot;event&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="st">&quot;pending&quot;</span>, <span class="st">&quot;pending&quot;</span>, <span class="st">&quot;pending&quot;</span>, <span class="st">&quot;pending&quot;</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  )</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>blinded_cut</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;   id enrollment time event   status</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; 1  1          0    8     1    event</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; 2  2          1    7     0  pending</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; 3  3          2    6     0 censored</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; 4  4          3    5     1    event</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 5  5          4    4     0  pending</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; 6  6          5    3     0  pending</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; 7  7          6    2     0  pending</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; 8  8          7    1     0  pending</span></span></code></pre></div>
+<p>The calculation itself is arm-specific. An independent unblinded
+statistician or service therefore joins the treatment assignment before
+running it. The participant-level input need not be distributed with the
+aggregate result.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>randomization_export <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>interim_cut <span class="ot">&lt;-</span> blinded_cut</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>interim_cut<span class="sc">$</span>treatment <span class="ot">&lt;-</span> randomization_export<span class="sc">$</span>treatment[</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="fu">match</span>(interim_cut<span class="sc">$</span>id, randomization_export<span class="sc">$</span>id)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>]</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>interim_cut <span class="ot">&lt;-</span> interim_cut[</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;enrollment&quot;</span>, <span class="st">&quot;time&quot;</span>, <span class="st">&quot;event&quot;</span>, <span class="st">&quot;status&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>]</span></code></pre></div>
+</div>
+<div id="evaluating-the-look" class="section level2">
+<h2>Evaluating the look</h2>
+<p>Suppose this is the second planned look of a trial with maximum
+sample size 12, equal randomization, and ten time units of follow-up per
+participant:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>interim_result <span class="ot">&lt;-</span> <span class="fu">evaluate_interim</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">data =</span> interim_cut,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">data_cut =</span> <span class="dv">8</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">look =</span> <span class="dv">2</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">12</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">10</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">1</span>, <span class="at">treatment =</span> <span class="dv">1</span>),</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;logrank&quot;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fl">0.05</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fl">0.90</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">Qn =</span> <span class="dv">1</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.95</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">20</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">20260831</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>)</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>interim_result</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; Goldilocks interim evaluation</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; Look: 2 (N = 8)</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; Decision: continue</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; Predictive success if accrual stops now: 0</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; Predictive success at maximum sample size: 0.2</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>interim_result<span class="sc">$</span>decision</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;   look planned_N calendar_time decision                 decision_reason</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; 1    2         8             8 continue continue_thresholds_not_crossed</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;   ppp_stop_now success_threshold immediate_success_threshold</span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt; 1            0               0.9                           1</span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;   immediate_success_crossed expected_success_crossed ppp_success_at_max</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; 1                     FALSE                    FALSE                0.2</span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt;   futility_threshold futility_crossed</span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">#&gt; 1               0.05            FALSE</span></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a>interim_result<span class="sc">$</span>monte_carlo</span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="co">#&gt;              estimand successes draws estimate       mcse      lower     upper</span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co">#&gt; 1 success_if_stop_now         0    20      0.0 0.00000000 0.00000000 0.1391083</span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt; 2  success_at_maximum         4    20      0.2 0.08944272 0.07135388 0.4010281</span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt;   threshold direction point_crossed bound_crossed</span></span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co">#&gt; 1      0.90   greater         FALSE         FALSE</span></span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt; 2      0.05      less         FALSE         FALSE</span></span></code></pre></div>
+<p>Here <code>Qn = 1</code> disables an immediate success claim.
+Crossing <code>Sn</code> stops accrual for expected success while
+enrolled participants continue follow-up. The method, alternative, and
+thresholds must match the prespecified trial design.</p>
+<p>At the maximum sample size, equal randomization implies six
+participants per arm. Four have already accrued in each arm, so the
+predictive calculation includes two potential future participants per
+arm:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>interim_result<span class="sc">$</span>diagnostics<span class="sc">$</span>target_allocation</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt;   control treatment </span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;         6         6</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>interim_result<span class="sc">$</span>diagnostics<span class="sc">$</span>current_allocation</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt;   control treatment </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt;         4         4</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>interim_result<span class="sc">$</span>diagnostics<span class="sc">$</span>potential_accruals</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;   control treatment </span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt;         2         2</span></span></code></pre></div>
+<p>No block size or future randomization sequence is needed. The design
+must have an exactly allocable maximum sample size: for example, a 1:2
+ratio requires <code>N_total</code> to be divisible by three. Observed
+enrollment in either arm cannot already exceed its implied maximum.</p>
+</div>
+<div id="using-separate-predictive-and-analysis-priors" class="section level2">
+<h2>Using separate predictive and analysis priors</h2>
+<p>Suppose a sponsor wants external evidence to inform the prediction of
+future events, while the Bayesian survival success test uses a diffuse
+prior. Supply both <code>prior_surv</code> and
+<code>prior_surv_final</code>. <strong>The latter is used now, inside
+each interim predictive replicate, as well as at the actual final
+analysis.</strong></p>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step in one interim predictive replicate</th>
+<th>Prior used</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Update observed events and exposure, draw hazards, and generate
+outstanding outcomes</td>
+<td><code>prior_surv</code></td>
+</tr>
+<tr class="even">
+<td>Analyze that hypothetical completed trial and compare its posterior
+probability with <code>prob_ha</code></td>
+<td><code>prior_surv_final</code></td>
+</tr>
+</tbody>
+</table>
+<p>Repeat these steps and calculate the fraction of completed trials
+that pass. The same pair of priors is used for current-sample and
+maximum-sample predictions. Each completed-data analysis starts from the
+specified analysis prior, rather than using the prediction posterior as
+a new prior.</p>
+<p>For this illustration, interpret the data’s time units as months. The
+predictive Gamma priors below have mean hazards of 0.05 and 0.03 per
+month for control and treatment. Their rate parameters use
+patient-months. These values are illustrative; the actual predictive
+prior needs justification from the external evidence and a
+prior-predictive assessment.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>predictive_prior <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">control =</span> <span class="fu">c</span>(<span class="at">shape =</span> <span class="dv">10</span>, <span class="at">rate =</span> <span class="dv">200</span>),</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="at">shape =</span> <span class="dv">6</span>, <span class="at">rate =</span> <span class="dv">200</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>analysis_prior <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">shape =</span> <span class="fl">0.1</span>, <span class="at">rate =</span> <span class="fl">0.1</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>bayes_prior_result <span class="ot">&lt;-</span> <span class="fu">evaluate_interim</span>(</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">data =</span> interim_cut,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">data_cut =</span> <span class="dv">8</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="at">look =</span> <span class="dv">2</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">12</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">10</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;bayes-surv&quot;</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">prior_surv =</span> predictive_prior,    <span class="co"># Generates outstanding outcomes</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">prior_surv_final =</span> analysis_prior, <span class="co"># Tests each hypothetical completed trial</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fl">0.05</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fl">0.90</span>,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">Qn =</span> <span class="dv">1</span>,</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.975</span>,</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">100</span>,</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="at">N_mcmc =</span> <span class="dv">1000</span>,</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">20260909</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>)</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>  bayes_prior_result<span class="sc">$</span>diagnostics<span class="sc">$</span>prior[</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">&quot;stage&quot;</span>, <span class="st">&quot;arm&quot;</span>, <span class="st">&quot;shape&quot;</span>, <span class="st">&quot;rate&quot;</span>, <span class="st">&quot;mean_hazard&quot;</span>)</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  ],</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>  <span class="at">caption =</span> <span class="st">&quot;Gamma priors used in the two parts of this interim calculation.&quot;</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>)</span></code></pre></div>
+<table>
+<caption>Gamma priors used in the two parts of this interim
+calculation.</caption>
+<thead>
+<tr class="header">
+<th align="left">stage</th>
+<th align="left">arm</th>
+<th align="right">shape</th>
+<th align="right">rate</th>
+<th align="right">mean_hazard</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">interim</td>
+<td align="left">control</td>
+<td align="right">10.0</td>
+<td align="right">200.0</td>
+<td align="right">0.05</td>
+</tr>
+<tr class="even">
+<td align="left">interim</td>
+<td align="left">treatment</td>
+<td align="right">6.0</td>
+<td align="right">200.0</td>
+<td align="right">0.03</td>
+</tr>
+<tr class="odd">
+<td align="left">final</td>
+<td align="left">control</td>
+<td align="right">0.1</td>
+<td align="right">0.1</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">final</td>
+<td align="left">treatment</td>
+<td align="right">0.1</td>
+<td align="right">0.1</td>
+<td align="right">1.00</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>bayes_prior_result<span class="sc">$</span>probabilities</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt;              estimand probability threshold direction threshold_crossed</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; 1 success_if_stop_now        0.00      0.90   greater             FALSE</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; 2  success_at_maximum        0.03      0.05      less              TRUE</span></span></code></pre></div>
+<p>Here the rows labelled <code>final</code> describe the analysis prior
+already used to test the hypothetical completed datasets.
+<code>diagnostics$posterior</code> describes the predictive posterior
+based on the observed interim data.</p>
+<p><strong>Omitting <code>prior_surv_final</code> would also use
+<code>predictive_prior</code> in the success tests. The package does not
+automatically replace an informative predictive prior with a weak
+analysis prior.</strong> The two priors need not be distinct; the
+default intentionally uses one prior for both roles.</p>
+<p>Use these same two arguments in <code>survival_adapt()</code> or
+<code>sim_trials()</code> when calibrating the design. The small Monte
+Carlo sizes here demonstrate the API; precision and operating
+characteristics must be assessed for the deployed design. At the actual
+final analysis, <code>prior_surv_final</code> is also used for any
+optional imputation of missing outcomes. Even with a separate analysis
+prior, predictive borrowing can affect the stopping decision and sample
+size.</p>
+<p>This example concerns <code>method = &quot;bayes-surv&quot;</code>. With
+<code>method = &quot;bayes-bin&quot;</code>, the completed-data success tests use
+<code>prior_bin</code> at both interim and final;
+<code>prior_surv_final</code> controls only optional final
+imputation.</p>
+</div>
+<div id="using-a-prespecified-rmst-endpoint" class="section level2">
+<h2>Using a prespecified RMST endpoint</h2>
+<p>For a design that prespecifies RMST as its analysis, supply
+<code>method = &quot;rmst&quot;</code> and the fixed restriction time. The same
+illustrative data cut can demonstrate this separate design, targeting
+treatment-minus-control RMST through six time units while follow-up
+continues through ten:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>rmst_result <span class="ot">&lt;-</span> <span class="fu">evaluate_interim</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">data =</span> interim_cut,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">data_cut =</span> <span class="dv">8</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">look =</span> <span class="dv">2</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">N_total =</span> <span class="dv">12</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">end_of_study =</span> <span class="dv">10</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">1</span>, <span class="at">treatment =</span> <span class="dv">1</span>),</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;rmst&quot;</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="at">rmst_tau =</span> <span class="dv">6</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;greater&quot;</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="at">Fn =</span> <span class="fl">0.05</span>,</span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="at">Sn =</span> <span class="fl">0.90</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  <span class="at">Qn =</span> <span class="dv">1</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="at">prob_ha =</span> <span class="fl">0.95</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="at">N_impute =</span> <span class="dv">20</span>,</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">20260908</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>)</span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>rmst_result<span class="sc">$</span>decision</span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt;   look planned_N calendar_time      decision                   decision_reason</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; 1    2         8             8 stop_futility futility_estimate_below_threshold</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;   ppp_stop_now success_threshold immediate_success_threshold</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; 1            0               0.9                           1</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;   immediate_success_crossed expected_success_crossed ppp_success_at_max</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; 1                     FALSE                    FALSE                  0</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;   futility_threshold futility_crossed</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; 1               0.05             TRUE</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>rmst_result<span class="sc">$</span>monte_carlo</span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;              estimand successes draws estimate mcse lower     upper threshold</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; 1 success_if_stop_now         0    20        0    0     0 0.1391083      0.90</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt; 2  success_at_maximum         0    20        0    0     0 0.1391083      0.05</span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;   direction point_crossed bound_crossed</span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt; 1   greater         FALSE         FALSE</span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt; 2      less          TRUE         FALSE</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a>rmst_result<span class="sc">$</span>metadata<span class="sc">$</span>design[<span class="fu">c</span>(<span class="st">&quot;method&quot;</span>, <span class="st">&quot;rmst_tau&quot;</span>, <span class="st">&quot;alternative&quot;</span>, <span class="st">&quot;h0&quot;</span>)]</span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt; $method</span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt; [1] &quot;rmst&quot;</span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt; $rmst_tau</span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt; [1] 6</span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt; $alternative</span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt; [1] &quot;greater&quot;</span></span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt; $h0</span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>Positive effects mean longer event-free time on treatment, so benefit
+uses <code>alternative = &quot;greater&quot;</code>. Both <code>h0</code> and
+<code>rmst_tau</code> use the data’s time units. The horizon remains
+fixed across looks and predictive imputations. Input
+<code>status = &quot;complete&quot;</code> still requires event-free follow-up to
+<code>end_of_study</code>, even when a participant has already reached
+<code>rmst_tau</code>. The <a href="rmst.html">RMST vignette</a>
+explains the final analysis and its support and variance requirements.
+These small Monte Carlo examples demonstrate the API; the deployed
+design needs its own calibration and precision assessment.</p>
+</div>
+<div id="reviewing-and-retaining-the-audit-trail" class="section level2">
+<h2>Reviewing and retaining the audit trail</h2>
+<p>The decision uses the Monte Carlo point estimates. The standard
+errors and exact one-sided bounds describe finite-draw uncertainty but
+do not change the decision. The interim record contains the same
+quantities retained for a simulated adaptive trial and can be summarized
+or plotted in the same way:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">summarise_trial_trace</span>(interim_result)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt;   interim_looks_completed last_look last_decision final_N final_post_prob_ha</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; 1                       1         2      continue      NA                 NA</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt;   ppp_stop_now ppp_success_at_max warning_count</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; 1            0                0.2             0</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>interim_result<span class="sc">$</span>trace</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;   look planned_N calendar_time active_followup N_enrolled N_treatment N_control</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; 1    2         8             8               5          8           4         4</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;   events_treatment events_control N_pending N_not_enrolled ppp_stop_now</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; 1                1              1         6              4            0</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt;   ppp_stop_now_mcse ppp_stop_now_lower ppp_stop_now_upper ppp_stop_now_draws</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; 1                 0                  0          0.1391083                 20</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;   success_threshold immediate_success_threshold immediate_success_crossed</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; 1               0.9                           1                     FALSE</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt;   expected_success_crossed ppp_success_at_max ppp_success_at_max_mcse</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; 1                    FALSE                0.2              0.08944272</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt;   ppp_success_at_max_lower ppp_success_at_max_upper ppp_success_at_max_draws</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; 1               0.07135388                0.4010281                       20</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt;   futility_threshold futility_crossed inner_mc_uncertain_stop_now</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; 1               0.05            FALSE                           0</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt;   inner_mc_uncertain_success_at_max decision                 decision_reason</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; 1                                 0 continue continue_thresholds_not_crossed</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;   empty_interval_fallback_count empty_interval_fallbacks warning_count</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; 1                             0                                      0</span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;   warning_messages</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; 1</span></span></code></pre></div>
+<p>The saved audit information records the evaluated design, package
+version, data cut, time-origin convention, and simulation seed.
+Supplying <code>seed</code> makes the predictive calculation exactly
+reproducible.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

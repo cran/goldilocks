@@ -30,7 +30,7 @@ two_arm_args <- list(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = 0,
   alternative = "less",
   h0 = 0,
@@ -105,7 +105,7 @@ out_single_arm
 #   prior_bin = prior_bin,
 #   bin_method = "quadrature",
 #   block = 2,
-#   rand_ratio = c(1, 1),
+#   rand_ratio = c(control = 1, treatment = 1),
 #   prop_loss = 0,
 #   alternative = "less",
 #   h0 = 0,
@@ -123,10 +123,14 @@ out_single_arm
 # out_null <- update(out_power, hazard_treatment = hc, seed = 5108)
 # 
 # oc <- summarise_sims(list(
-#   "target: treatment event probability 25%" = out_power$sims,
-#   "null: treatment event probability 35%" = out_null$sims
+#   "target: treatment event probability 25%" = out_power,
+#   "null: treatment event probability 35%" = out_null
 # ))
-# oc$true_treatment_event_probability <- c(0.25, 0.35)
+# effect_by_scenario <- c(
+#   "target: treatment event probability 25%" = 0.25,
+#   "null: treatment event probability 35%" = 0.35
+# )
+# oc$true_treatment_event_probability <- unname(effect_by_scenario[oc$scenario])
 # 
 # oc
 # plot_sim_ocs(

@@ -361,6 +361,25 @@ affected by <code>prior_surv</code> and <code>prior_bin</code>; a final
 imputed analysis uses <code>prior_surv_final</code> and
 <code>prior_bin</code>; and a non-imputed final binary analysis is
 affected by <code>prior_bin</code> alone.</p>
+<p>The imputation and completed-data analysis are separate models. The
+piecewise-exponential Gamma model uses event times and available
+event-free follow-up to predict pending endpoint statuses. The
+beta-binomial model then analyzes the completed event indicators at
+<code>end_of_study</code>. <code>prior_bin</code> is not derived from
+the binary-horizon distribution implied by <code>prior_surv</code>, and
+<code>goldilocks</code> does not treat the two stages as one joint
+Bayesian model. This modular combination may be intentional, but its
+operating characteristics can depend on both prior specifications
+whenever outcomes require imputation. Choosing
+<code>binary_imputation = &quot;bernoulli&quot;</code> rather than
+<code>&quot;event-time&quot;</code> does not remove the distinction: both options
+use the same piecewise-exponential prediction model.</p>
+<p>The saved analysis specification records <code>prior_surv</code>,
+<code>prior_surv_final</code>, <code>prior_bin</code>, and
+<code>end_of_study</code>, together with the Gamma prior parameters by
+analysis stage, arm, and interval. These values should be included in
+the simulation report because both prior families can affect interim
+decisions.</p>
 <p>For the examples below, we use the default weakly informative <span class="math inline">\(\operatorname{Gamma}(0.1, 0.1)\)</span> hazard
 prior and a uniform <span class="math inline">\(\operatorname{Beta}(1,
 1)\)</span> binary-endpoint prior:</p>
@@ -377,6 +396,14 @@ imputed (<code>imputed_final = TRUE</code>) or, if
 <code>imputed_final = FALSE</code>, excluded from the final binary
 analysis.</li>
 </ul>
+<p>The examples use <code>prop_loss = 0</code>. If dropout is added,
+<code>prop_loss</code> specifies the CDF of an independent exponential
+dropout time at <code>end_of_study</code>, not an exact fraction of
+missing binary outcomes. Events occurring before dropout remain
+observed. Consequently, excluding early-censored subjects can bias
+binary event probabilities even though censoring is independent for
+survival analysis. Assess final imputation and its event-time-model
+assumptions when evaluating binary designs with dropout.</p>
 <div id="two-arm-design" class="section level2">
 <h2>Two-arm design</h2>
 <p>Suppose the control event probability by 12 months is 35%, and the
@@ -405,7 +432,7 @@ p_{\text{control}}\]</span></p>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">prior_bin =</span> prior_bin,</span>
 <span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">bin_method =</span> <span class="st">&quot;quadrature&quot;</span>,</span>
 <span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">2</span>,</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">1</span>, <span class="at">treatment =</span> <span class="dv">1</span>),</span>
 <span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
 <span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
 <span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
@@ -421,14 +448,18 @@ p_{\text{control}}\]</span></p>
 <span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a>out_two_arm</span>
 <span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
 <span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; 1           0.95      0        less          60        60        120   120</span></span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha  est_final ppp_success stop_futility stop_expected_success</span></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; 1    0.9178978 -0.1129032        0.85             0                     0</span></span></code></pre></div>
-<p>The output has the same structure as other
-<code>survival_adapt()</code> analyses. For
-<code>method = &quot;bayes-bin&quot;</code>, <code>est_final</code> is the
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha  est_final ppp_success stop_futility stop_immediate_success</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; 1    0.9178978 -0.1129032        0.85             0                      0</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt;   stop_expected_success trial_success     stopping_reason decision_time</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; 1                     0         FALSE maximum_sample_size        22.911</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt;   accrual_stop_time analysis_ready_time planned_completion_time</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; 1            10.911              22.911                  22.911</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt;   followup_person_time peak_active_followup</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; 1             1193.166                  106</span></span></code></pre></div>
+<p>For <code>method = &quot;bayes-bin&quot;</code>, <code>est_final</code> is the
 posterior mean binary effect: the treatment event probability minus the
-control event probability. The <code>post_prob_ha</code> value is the
-posterior probability that this difference is below <code>h0</code> when
+control event probability. <code>post_prob_ha</code> is the posterior
+probability that this difference is below <code>h0</code> when
 <code>alternative = &quot;less&quot;</code>.</p>
 </div>
 <div id="choosing-the-binary-imputation-approach" class="section level2">
@@ -455,11 +486,11 @@ enrolled, <span class="math inline">\(T=0\)</span>. Observed events are
 not imputed. Each completed dataset still uses a sampled posterior
 hazard, so both approaches retain uncertainty in the predictive
 piecewise-exponential model.</p>
-<p>The approaches have the same endpoint distribution. They can
-nevertheless produce different Monte Carlo realizations if their
-random-number streams differ, so operating characteristics should be
-compared using enough trials and imputations. The following small seeded
-comparison uses the same design and random-number stream:</p>
+<p>The two approaches imply the same endpoint distribution. Finite Monte
+Carlo estimates can nevertheless differ, so comparisons should use
+adequate numbers of trials and imputations. The following small
+comparison uses a common seed to make the numerical results
+reproducible:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>compare_binary_imputation <span class="ot">&lt;-</span> <span class="cf">function</span>(imputation) {</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">2101</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> <span class="fu">do.call</span>(</span>
@@ -476,10 +507,17 @@ comparison uses the same design and random-number stream:</p>
 <span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;                         ppp_success post_prob_ha  est_final</span></span>
 <span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; conditional event time            0    0.4042967 0.02380952</span></span>
 <span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; direct Bernoulli status           0    0.4042967 0.02380952</span></span></code></pre></div>
-<p>The direct Bernoulli calculation is also more stable in extreme tails
-because it evaluates the remaining cumulative hazard through
-<code>-expm1(-(H(T^*) - H(T)))</code>, rather than subtracting two
-survival probabilities that may both round to zero.</p>
+<p>The direct Bernoulli calculation can also be more numerically stable
+for very small survival probabilities because it works from the
+remaining cumulative hazard rather than subtracting two nearly zero
+survival probabilities.</p>
+<p>Whichever imputation approach is selected, the completed
+beta-binomial analysis depends only on the event count and denominator
+in each arm. With <code>bin_method = &quot;mc&quot;</code>, each predictive
+replicate receives an independent set of <code>N_mcmc</code>
+beta-posterior draws. Thus, the number of predictive imputations and the
+number of posterior draws represent distinct sources of Monte Carlo
+error.</p>
 </div>
 <div id="single-arm-design" class="section level2">
 <h2>Single-arm design</h2>
@@ -521,8 +559,14 @@ exceeds <code>prob_ha</code>.</p>
 <span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>out_single_arm</span>
 <span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt;   prob_threshold margin alternative N_treatment N_control N_enrolled N_max</span></span>
 <span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; 1           0.95    0.3        less          50         0         50    80</span></span>
-<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_expected_success</span></span>
-<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 1    0.9980375 0.1346154           1             0                     1</span></span></code></pre></div>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt;   post_prob_ha est_final ppp_success stop_futility stop_immediate_success</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 1    0.9980375 0.1346154           1             0                      0</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt;   stop_expected_success trial_success  stopping_reason decision_time</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 1                     1          TRUE expected_success      17.96506</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt;   accrual_stop_time analysis_ready_time planned_completion_time</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; 1           5.96506            17.96506                17.96506</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt;   followup_person_time peak_active_followup</span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt; 1             564.1026                   49</span></span></code></pre></div>
 <p>In this setting <code>est_final</code> is the posterior mean event
 probability in the single arm, and <code>post_prob_ha</code> is the
 posterior probability that this event probability is below the
@@ -535,8 +579,9 @@ benchmark.</p>
 <li><code>bin_method = &quot;mc&quot;</code> draws from the beta posterior
 directly. Use <code>N_mcmc</code> to control the number of Monte Carlo
 draws.</li>
-<li><code>bin_method = &quot;normal&quot;</code> uses a normal approximation to
-the posterior mean or treatment-control difference.</li>
+<li><code>bin_method = &quot;normal&quot;</code> approximates the posterior event
+probability or treatment-control difference by a normal distribution
+with matching mean and variance.</li>
 <li><code>bin_method = &quot;quadrature&quot;</code> uses numerical integration
 for the two-arm posterior difference, and the closed-form beta CDF for
 single-arm designs.</li>
@@ -547,15 +592,18 @@ integration for a two-arm design) and is a useful high-accuracy default
 when it is computationally feasible. The normal approximation is fastest
 in a representative two-arm benchmark, but should be used with care when
 sample sizes are small or event probabilities are near 0 or 1.</p>
+<p>Approximation error can move the posterior probability across
+<code>prob_ha</code>, changing success and interim stopping decisions.
+Increasing <code>N_mcmc</code> does not correct normal-approximation
+error. Use <code>bin_method = &quot;quadrature&quot;</code> or sufficiently
+precise Monte Carlo Beta draws when the approximation is unsuitable.</p>
 </div>
 <div id="operating-characteristics" class="section level2">
 <h2>Operating characteristics</h2>
 <p>As with the survival methods, operating characteristics should be
-evaluated by simulation. The <code>seed</code> argument makes the
-simulation reproducible, including when <code>ncores</code> is greater
-than 1. With <code>backend = &quot;auto&quot;</code>, <code>sim_trials()</code>
-uses forked workers on Unix-like platforms and PSOCK workers on
-Windows.</p>
+evaluated by simulation under clinically relevant null and alternative
+scenarios. The <code>seed</code> argument makes the Monte Carlo study
+reproducible, including when <code>ncores</code> is greater than 1.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>out_power <span class="ot">&lt;-</span> <span class="fu">sim_trials</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">N_trials =</span> <span class="dv">1000</span>,</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">hazard_treatment =</span> ht,</span>
@@ -570,7 +618,7 @@ Windows.</p>
 <span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="at">prior_bin =</span> prior_bin,</span>
 <span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="at">bin_method =</span> <span class="st">&quot;quadrature&quot;</span>,</span>
 <span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="at">block =</span> <span class="dv">2</span>,</span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  <span class="at">rand_ratio =</span> <span class="fu">c</span>(<span class="at">control =</span> <span class="dv">1</span>, <span class="at">treatment =</span> <span class="dv">1</span>),</span>
 <span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="at">prop_loss =</span> <span class="dv">0</span>,</span>
 <span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="at">alternative =</span> <span class="st">&quot;less&quot;</span>,</span>
 <span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="at">h0 =</span> <span class="dv">0</span>,</span>
@@ -588,26 +636,30 @@ Windows.</p>
 <span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>out_null <span class="ot">&lt;-</span> <span class="fu">update</span>(out_power, <span class="at">hazard_treatment =</span> hc, <span class="at">seed =</span> <span class="dv">5108</span>)</span>
 <span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a></span>
 <span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>oc <span class="ot">&lt;-</span> <span class="fu">summarise_sims</span>(<span class="fu">list</span>(</span>
-<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>  <span class="st">&quot;target: treatment event probability 25%&quot;</span> <span class="ot">=</span> out_power<span class="sc">$</span>sims,</span>
-<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>  <span class="st">&quot;null: treatment event probability 35%&quot;</span> <span class="ot">=</span> out_null<span class="sc">$</span>sims</span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>  <span class="st">&quot;target: treatment event probability 25%&quot;</span> <span class="ot">=</span> out_power,</span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>  <span class="st">&quot;null: treatment event probability 35%&quot;</span> <span class="ot">=</span> out_null</span>
 <span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>))</span>
-<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>oc<span class="sc">$</span>true_treatment_event_probability <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.35</span>)</span>
-<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a></span>
-<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>oc</span>
-<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
-<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>  oc,</span>
-<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_treatment_event_probability&quot;</span>,</span>
-<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment event probability&quot;</span></span>
-<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a>)</span>
-<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(out_power)</span>
-<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(out_power)</span></code></pre></div>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>effect_by_scenario <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a>  <span class="st">&quot;target: treatment event probability 25%&quot;</span> <span class="ot">=</span> <span class="fl">0.25</span>,</span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>  <span class="st">&quot;null: treatment event probability 35%&quot;</span> <span class="ot">=</span> <span class="fl">0.35</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a>)</span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>oc<span class="sc">$</span>true_treatment_event_probability <span class="ot">&lt;-</span> <span class="fu">unname</span>(effect_by_scenario[oc<span class="sc">$</span>scenario])</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>oc</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="fu">plot_sim_ocs</span>(</span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>  oc,</span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a>  <span class="at">effect =</span> <span class="st">&quot;true_treatment_event_probability&quot;</span>,</span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;True treatment event probability&quot;</span></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a>)</span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="fu">plot_sim_stopping</span>(out_power)</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a><span class="fu">plot_sim_decisions</span>(out_power)</span></code></pre></div>
 <p>These plots separate three complementary questions: how operating
 characteristics change with the true binary event probability, where
 enrollment stops within one scenario, and how the pair of predictive
 probabilities drives each interim decision. Set
 <code>return_trace = TRUE</code> only for scenarios where the decision
-map is needed; it does not change the compact <code>sims</code>
-summary.</p>
+map is needed; it does not change the estimated operating
+characteristics.</p>
 <p>The binary endpoint model is still calibrated through the event-time
 simulator. When the binary endpoint corresponds to event status by
 <code>end_of_study</code>, choose hazards that reproduce clinically

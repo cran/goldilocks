@@ -7,6 +7,7 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/goldilocks)](https://CRAN.R-project.org/package=goldilocks)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21683363.svg)](https://doi.org/10.5281/zenodo.21683363)
 [![R-CMD-check](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/graemeleehickey/goldilocks/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/graemeleehickey/goldilocks/actions/workflows/pkgdown.yaml/badge.svg)](https://graemeleehickey.github.io/goldilocks/)
 [![Codecov test
@@ -36,9 +37,10 @@ to determine whether the current sample size is sufficient or whether
 continuing accrual would be futile. The algorithm explicitly accounts
 for complete follow-up of all patients before the primary analysis is
 conducted. Time-to-event final analyses include the log-rank test, Cox
-proportional hazards regression Wald test, and Bayesian
-piecewise-exponential inference. Fixed-time binary final analyses
-include a frequentist risk-difference Wald test and Bayesian
+proportional hazards regression Wald test, restricted mean survival time
+(RMST) difference Wald test, and Bayesian piecewise-exponential
+inference. Fixed-time binary final analyses include frequentist
+risk-difference Wald and Farrington-Manning score tests, and Bayesian
 beta-binomial inference.
 
 Broglio et al. (2014) refer to this as a *Goldilocks trial design*, as
@@ -55,17 +57,38 @@ final analysis:
 
 - `"cox"`: Cox model Wald test for a two-arm time-to-event endpoint
 
+- `"rmst"`: RMST difference Wald test for two arms at a prespecified
+  `rmst_tau` (defaults to `end_of_study`); positive differences favor
+  longer event-free time
+
 - `"bayes-surv"`: Bayesian piecewise-exponential analysis for one- or
   two-arm time-to-event endpoints
 
-- `"riskdiff"`: frequentist Wald test for a two-arm fixed-time binary
-  event-risk difference
+- `"riskdiff-wald"`: frequentist Wald test for a two-arm fixed-time
+  binary event-risk difference
+
+- `"riskdiff-fm"`: Farrington-Manning score test for a two-arm
+  fixed-time binary event-risk difference, including sparse outcomes
 
 - `"bayes-bin"`: Bayesian beta-binomial analysis for one- or two-arm
   fixed-time binary endpoints
 
+The former `"riskdiff"` option remains available as a deprecated alias
+for `"riskdiff-wald"` and emits a warning.
+
 See the package vignettes for worked two-arm, single-arm, piecewise
-survival, and Bayesian binary examples.
+survival, RMST, and Bayesian binary examples. For RMST use
+`alternative = "greater"` to test longer event-free time and express
+`h0` in the same time units as follow-up.
+
+For `method = "bayes-surv"`, `prior_surv` generates predictive outcomes,
+while `prior_surv_final` tests each hypothetical completed trial **at
+the interim look** and governs the actual final analysis. To incorporate
+external evidence only in prediction, supply both priors explicitly.
+Omitting `prior_surv_final` uses `prior_surv` for both roles. Bayesian
+binary success tests instead use `prior_bin`. See the [worked example of
+separate
+priors](https://graemeleehickey.github.io/goldilocks/articles/interim-data.html#using-separate-predictive-and-analysis-priors).
 
 ## Key benefits
 
@@ -98,7 +121,8 @@ Biopharmaceutical Statistics*, 2014; **24(3)**: 685–705.
 
 ## Installation
 
-The current source release is `goldilocks` 0.6.0.
+The source version is `goldilocks` 1.0.0, prepared for CRAN submission.
+See [NEWS.md](NEWS.md) for changes and migration guidance from 0.6.0.
 
 You can install the released version of `goldilocks` from CRAN with:
 

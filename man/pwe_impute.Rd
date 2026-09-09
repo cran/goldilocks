@@ -7,27 +7,33 @@
 pwe_impute(time, hazard, cutpoints = NULL, maxtime = NULL)
 }
 \arguments{
-\item{time}{vector. The observed time for patient that have had no event or
-passed \code{maxtime}.}
+\item{time}{A required numeric vector of finite, non-negative event-free
+follow-up times for subjects who have not had an event. When \code{maxtime} is
+supplied, no value may exceed it. A zero-length vector returns a zero-row
+data frame. Values are not recycled against other arguments.}
 
-\item{hazard}{vector. Finite non-negative constant hazard rates for
-exponential failures. If the final rate is zero, \code{maxtime} must be
-supplied so that subjects without an event can be administratively censored.}
+\item{hazard}{A required numeric vector of finite, non-negative event rates,
+with one value per interval defined by \code{cutpoints}. If the final rate is
+zero, \code{maxtime} must be supplied.}
 
-\item{cutpoints}{finite, positive, strictly increasing vector of interior
-times at which the hazard rate changes. The number of hazard rates must be
-one greater than the number of cutpoints. Use \code{NULL} for a constant hazard.}
+\item{cutpoints}{\code{NULL} (the default), or a numeric vector of finite,
+positive, strictly increasing interior times at which the hazard rate
+changes. The number of hazard rates must be one greater than the number of
+cutpoints. Use \code{NULL} for a constant hazard.}
 
-\item{maxtime}{scalar. Optional administrative censoring time. When
-supplied, it must be later than every cutpoint.}
+\item{maxtime}{\code{NULL} (the default), or a single finite, positive numeric
+administrative censoring time. When supplied, it must be later than every
+cutpoint.}
 }
 \value{
-A data frame with simulated follow-up times (\code{time}) and respective
-event indicator (\code{event}, 1 = event occurred, 0 = censoring).
+A data frame with one row per subject and columns \code{time}, the imputed
+event or censoring time, and \code{event}, coded \code{1} for an event and \code{0} for
+administrative censoring.
 }
 \description{
-Imputation of time-to-event outcomes using the piecewise
-constant hazard exponential function conditional on observed exposure.
+Draws an event time from a piecewise-exponential distribution
+conditional on a subject remaining event-free through the observed
+follow-up time, with optional administrative censoring.
 }
 \details{
 If a subject is event-free at time \eqn{s < t}, then the conditional
@@ -36,15 +42,22 @@ probability is
 \deqn{F_{T | s}(t | s) = P(T \le t | T > s) = \frac{F(t) - F(s)}{1 - F(s)}}
 
 where \eqn{F(\cdot)} is the cumulative distribution function of the
-piecewise exponential (PWE) distribution. Equivalently, \eqn{F(t) = 1 -
-  S(t)}, where \code{S(t)} is the survival function. If \eqn{U \sim Unif(0, 1)},
-then we can generate an event time (conditional on being event free up
-until \eqn{s}) as
+piecewise exponential (PWE) distribution. Equivalently,
+\eqn{F(t) = 1 - S(t)}, where \code{S(t)} is the survival function. If
+\eqn{U \sim Unif(0, 1)}, then we can generate an event time (conditional on
+being event free up until \eqn{s}) as
 
 \deqn{F^{-1}(U(1 - F(s)) + F(s))}
 
 If \eqn{s = 0}, this is equivalent to a direct unconditional sample from
 the PWE distribution.
+
+PWEALL represents the generating hazard with pieces closed on the left and
+open on the right. Its cumulative distribution is continuous at every
+cutpoint, so this endpoint choice does not affect imputation. For assigning
+realized event times to analysis intervals, \code{goldilocks} uses the survival
+counting-process convention, open on the left and closed on the right; an
+event exactly at a cutpoint belongs to the interval ending there.
 }
 \examples{
 pwe_impute(time = c(3, 4, 5), hazard = c(0.002, 0.01), cutpoints = 12)

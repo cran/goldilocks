@@ -1,6 +1,10 @@
 ---
 title: "ADVENT: a published Goldilocks design"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    self_contained: false
+    lib_dir: libs
+    css: libs/vignette.css
 vignette: >
   %\VignetteIndexEntry{ADVENT: a published Goldilocks design}
   %\VignetteEngine{knitr::rmarkdown}
@@ -8,11 +12,10 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+source("shared-vignette-resources.R")
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache = TRUE,
-  cache.path = "advent-cache/",
   fig.width = 7,
   fig.height = 4
 )
@@ -102,7 +105,7 @@ digraph advent_trial_flow {
 
 In the code below, roll-in subjects and randomized subjects excluded from the analysis population are ignored. The simulation starts directly with the modeled 1:1 analysis population.
 
-## The Goldilocks flow
+## Adaptive decision process
 
 The ADVENT design paper includes a flowchart for the adaptive sample size algorithm. The chart below recreates the logic in package terms rather than copying the published image.
 
@@ -215,9 +218,14 @@ prior_surv_final <- prior_surv_default
 
 The safety endpoint uses `prior_surv_default` at both stages. The distinction from `prior_bin` is important: the survival priors control predictive imputation, whereas `prior_bin` is the ADVENT-aligned $\operatorname{Beta}(0.5, 0.5)$ prior for the completed binary-endpoint analysis. Because the Gamma rates are expressed in patient-days, all event times, exposure, and cutpoints supplied below are also in days.
 
-Later follow-up intervals can have no exposure at an early look. The SAP's conjugate model then leaves the corresponding hazard governed by its prior. The package's historical default instead propagates sufficient statistics from a neighboring interval, so the examples explicitly set `empty_interval = "prior"`.
+Later follow-up intervals can have no exposure at an early look. The SAP's conjugate model then leaves the corresponding hazard governed by its prior, which is also the package default. The examples set `empty_interval = "prior"` explicitly for auditability. Historical results that used neighboring-interval propagation can be reproduced with the legacy `empty_interval = "propagate"` option.
 
-The SAP reports $M = 5000$ completed datasets for its predictive-probability and multiple-imputation calculations. The evaluated parts of this vignette deliberately use fewer imputations: 50 for the worked single trials and 30 for the operating-characteristic example. We do not use $M = 5000$ in evaluated code in order to keep vignette computation time to a minimum. The unevaluated fuller template does use $M = 5000$ to show the ADVENT setting. Consequently, the numerical results shown in the vignette are demonstrations of package workflow rather than reproductions of the ADVENT calibration.
+The SAP reports $M = 5000$ completed data sets for its predictive-probability
+and multiple-imputation calculations. The evaluated examples deliberately use
+fewer imputations: 50 for the single-trial analyses and 30 for the operating-
+characteristic example. The fuller, unevaluated specification uses $M = 5000$
+to represent the ADVENT setting. Consequently, the numerical results shown
+here illustrate the analysis but do not reproduce the ADVENT calibration.
 
 ## SAP event-time models and time units
 
@@ -243,14 +251,11 @@ safety_hazard_per_day <- c(0.011137363, 1.53540e-5)
 event_free_at_interval_end <- function(hazard, interval_end) {
   vapply(seq_along(hazard), function(j) {
     cutpoints <- if (j == 1L) NULL else interval_end[seq_len(j - 1L)]
-    post <- array(hazard[seq_len(j)], dim = c(1L, j, 1L))
-
-    1 - goldilocks:::haz_to_prop(
-      post = post,
+    1 - ppwe(
+      hazard = matrix(hazard[seq_len(j)], nrow = 1L),
       cutpoints = cutpoints,
-      end_of_study = interval_end[j],
-      single_arm = TRUE
-    )$p_treatment
+      end_of_study = interval_end[j]
+    )
   }, numeric(1))
 }
 
@@ -283,7 +288,7 @@ hazard_table <- data.frame(
 knitr::kable(hazard_table, digits = c(9, 3))
 ```
 
-The less-than sign marks the exclusive upper boundary of each nonfinal interval; the final interval includes the administrative endpoint at day 360. This notation makes clear that adjacent windows do not overlap. Because event time is continuous, assigning an exact cut-point to the interval on its left or right would not change the model probability.
+The less-than sign marks the exclusive upper boundary of each nonfinal interval in the SAP's continuous generating-hazard notation; the final interval includes the administrative endpoint at day 360. This notation makes clear that adjacent windows do not overlap. Because event time is continuous, assigning an exact cut-point to the interval on its left or right would not change the model probability. When `goldilocks` summarizes realized event times, it follows the survival counting-process convention `(start, stop]`, so an event recorded exactly at a cut-point is assigned to the interval ending there.
 
 The following calculation verifies the two final binary event probabilities used by the vignette:
 
@@ -371,9 +376,26 @@ $$
 
 This matches the reported 15 percentage point absolute noninferiority margin for treatment success, after translating success into failure. A lower failure probability is better, so we use `alternative = "less"`.
 
-ADVENT used 1:1 randomization stratified by site. The design paper reports randomly varying permuted block sizes, but the SAP does not provide the block sizes or the randomization-generation algorithm. The package can generate blocked 1:1 randomization, but it does not model site-level stratification or randomly varying block sizes. Here `block = 2` and `rand_ratio = c(1, 1)` retain simple 1:1 balance; they do not reproduce the trial's full randomization scheme.
+ADVENT used 1:1 randomization stratified by site. The design paper reports randomly varying permuted block sizes, but the SAP does not provide the block sizes or the randomization-generation algorithm. The package can generate blocked 1:1 randomization, but it does not model site-level stratification or randomly varying block sizes. Here `block = 2` and `rand_ratio = c(control = 1, treatment = 1)` retain simple 1:1 balance; they do not reproduce the trial's full randomization scheme.
 
-The SAP explicitly designates 5% of subjects as lost to follow-up for safety and 7.5% for effectiveness: the same 5% plus another 2.5% who may be unassessable for effectiveness while remaining assessable for safety. SAP dropout times are uniform over days 0--360, and an event remains observed when it precedes dropout. The package's `prop_loss` mechanism is similar but not identical: every selected subject is censored at a uniformly generated time before their potential event or administrative censoring time. Separate endpoint runs also cannot preserve the SAP's shared subject-level 5% plus nested 2.5% relationship. We therefore use 0.075 and 0.05 to map the SAP's **designated fractions**, not to claim exact reproduction of its censoring process. The subsequently observed proportion not completing follow-up was approximately 0.04, which is close to 0.05, but that post-trial quantity is not the design input and need not equal endpoint-specific missingness.
+The SAP explicitly designates 5% of subjects as lost to follow-up for safety
+and 7.5% for effectiveness: the same 5% plus another 2.5% who may be
+unassessable for effectiveness while remaining assessable for safety. SAP
+dropout times among designated subjects are uniform over days 0--360, and an
+event remains observed when it precedes dropout.
+
+The package instead draws independent exponential dropout times for all
+subjects. We use `prop_loss = 0.075` and `0.05` to match the endpoint-specific
+probabilities of potential dropout by day 360, with daily hazards
+$-\log(0.925)/360$ and $-\log(0.95)/360$. This approximates the SAP's timing
+distribution; it does not reproduce its designated-subject uniform mechanism.
+Both approaches retain events occurring before dropout, so the observed
+proportion censored by dropout can be below the stated probability. Package
+dropout counts vary between trials, and separate endpoint runs cannot preserve
+the SAP's shared subject-level 5% plus nested 2.5% relationship. The
+subsequently observed proportion not completing follow-up was approximately
+0.04, but that post-trial quantity is not the design input and need not equal
+endpoint-specific missingness.
 
 The SAP reports the expected accrual schedule in subjects per month: 2, 5, 10, 15, 20, 25, and 30 during months 1--7, then 33 per month from month 8 onward. Accrual is into the primary analysis population. The source rates remain visibly labeled per month below, but they are divided by 30 exactly once before being supplied to `goldilocks`. Likewise, the calendar-month change points are converted once to days since first patient in. The SAP does not describe its individual arrival-time generator; `goldilocks` uses these rates in a continuous-time Poisson enrollment process with first patient in fixed at calendar day 0.
 
@@ -385,6 +407,7 @@ enrollment_rate_per_day <- enrollment_rate_per_month / days_per_month
 enrollment_rate_change_day <-
   enrollment_rate_change_month * days_per_month
 
+# Independent exponential dropout CDFs at the 360-day per-subject horizon.
 effectiveness_prop_loss <- 0.075
 safety_prop_loss <- 0.05
 
@@ -411,7 +434,9 @@ knitr::kable(enrollment_schedule, digits = 4)
 
 Thus, for example, trial-calendar day 210 is the beginning of month 8 and the 33-subject/month rate. It is unrelated to the effectiveness endpoint's subject-relative cut-point at follow-up day 210. The 360-day follow-up horizon is also per subject, not the total duration of the trial. Accrual speed remains worth sensitivity checking: faster accrual reduces the amount of observed endpoint information available at interim looks.
 
-The following `survival_adapt()` call simulates and analyzes the effectiveness endpoint for **one simulated trial**. It does not estimate operating characteristics over multiple trials.
+The following `survival_adapt()` analysis simulates and evaluates the
+effectiveness endpoint for **one trial replicate**. It does not estimate
+operating characteristics over repeated trials.
 
 ```{r effectiveness-fit}
 set.seed(4601)
@@ -431,7 +456,7 @@ advent_effectiveness <- survival_adapt(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = effectiveness_prop_loss,
   alternative = "less",
   h0 = 0.15,
@@ -447,7 +472,7 @@ advent_effectiveness <- survival_adapt(
 advent_effectiveness
 ```
 
-The most important columns are:
+The principal trial-level quantities are:
 
 -   `N_enrolled`: the selected sample size for this simulated trial.
 -   `stop_expected_success`: whether enrollment stopped because the current sample size appeared adequate.
@@ -464,7 +489,8 @@ $$
 \mid \text{data}) > 0.966.
 $$
 
-This `survival_adapt()` call likewise represents **one simulated trial** for the safety endpoint.
+This `survival_adapt()` analysis likewise represents **one trial replicate**
+for the safety endpoint.
 
 ```{r safety-fit}
 set.seed(4602)
@@ -484,7 +510,7 @@ advent_safety <- survival_adapt(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   prop_loss = safety_prop_loss,
   alternative = "less",
   h0 = 0.08,
@@ -502,9 +528,12 @@ advent_safety
 
 In the published ADVENT design, a predicted-success stopping recommendation required high predictive probability for both endpoints. A futility recommendation could be triggered by low predictive probability for either endpoint. The two separate simulations above do not impose that joint rule. Instead, they show how each endpoint-specific Bayesian rule maps to `survival_adapt()`.
 
-## A compact design object
+## A reusable design specification
 
-For simulations, it is helpful to collect the settings that genuinely are common and then add endpoint-specific cut-points and designated missingness fractions. Keeping those endpoint-specific arguments out of the common object prevents an effectiveness setting from being reused accidentally for safety, or vice versa.
+For simulations, it is helpful to collect the assumptions that genuinely are
+common and then add endpoint-specific cut-points and dropout probabilities.
+Keeping endpoint-specific assumptions separate reduces the risk of applying an
+effectiveness assumption to the safety endpoint, or vice versa.
 
 ```{r common-design}
 advent_common <- list(
@@ -518,7 +547,7 @@ advent_common <- list(
   prior_bin = prior_bin,
   bin_method = "quadrature",
   block = 2,
-  rand_ratio = c(1, 1),
+  rand_ratio = c(control = 1, treatment = 1),
   alternative = "less",
   Fn = Fn,
   Sn = Sn,
@@ -543,7 +572,7 @@ advent_safety_args <- modifyList(advent_common, list(
 advent_effectiveness_args
 ```
 
-Then the endpoint-specific simulation calls become short:
+The endpoint-specific simulations can then reuse the common specification:
 
 ```{r oc-small}
 set.seed(4610)
@@ -574,24 +603,46 @@ eff_null_boundary <- do.call(sim_trials, c(
 ))
 
 oc_small <- summarise_sims(list(
-  "target: equal 35% failure" = eff_target$sims,
-  "margin: PFA failure 50%" = eff_null_boundary$sims
+  "target: equal 35% failure" = eff_target,
+  "margin: PFA failure 50%" = eff_null_boundary
 ))
 
-knitr::kable(oc_small, digits = 3)
+knitr::kable(
+  oc_small[c(
+    "scenario", "n_used", "n_failed", "power", "stop_success",
+    "stop_futility", "stop_max_N", "mean_N"
+  )],
+  digits = 3,
+  col.names = c(
+    "Scenario", "Trials used", "Failed runs", "Success probability",
+    "Expected success stop", "Futility stop", "Maximum N", "Mean N"
+  )
+)
 ```
 
-Each scenario uses 500 simulated trials and two cores. This remains a workflow demonstration rather than a definitive estimate of power or type I error. For design work, increase `N_trials`, increase `N_impute`, and run sensitivity analyses over accrual speed, loss to follow-up, event rates, and the imputation hazard model.
+The table displays selected operating characteristics; `oc_small` retains the
+full summary, including Monte Carlo uncertainty. Each scenario uses 500
+simulated trials and two cores. These results are
+illustrative rather than definitive estimates of power or type I error. A
+design evaluation should increase `N_trials` and `N_impute` as needed for
+Monte Carlo precision and examine sensitivity to accrual, loss to follow-up,
+event rates, and the imputation hazard model.
 
-## Visualizing the simulated design
+## Graphical assessment of the simulated design
 
-The plotting helpers answer complementary design questions. First,
+The plots answer complementary design questions. First,
 `plot_sim_ocs()` compares operating characteristics across the target and
 noninferiority-margin scenarios. The true PFA event probability is supplied as
 the effect scale.
 
 ```{r advent-oc-plot, fig.width=9, fig.height=4.5}
-oc_small$true_pfa_event_probability <- c(0.35, 0.50)
+effect_by_scenario <- c(
+  "target: equal 35% failure" = 0.35,
+  "margin: PFA failure 50%" = 0.50
+)
+oc_small$true_pfa_event_probability <- unname(
+  effect_by_scenario[oc_small$scenario]
+)
 plot_sim_ocs(
   oc_small,
   effect = "true_pfa_event_probability",
@@ -618,7 +669,8 @@ plot_sim_decisions(eff_target)
 
 ## A fuller simulation template
 
-The following code is closer to what one would run outside the vignette build. It is not evaluated here.
+The following larger simulation uses the ADVENT values of `N_trials` and
+`N_impute`. It is provided as a template and is not evaluated here.
 
 ```{r full-calibration-template, eval=FALSE}
 advent_effectiveness_full_args <- modifyList(advent_effectiveness_args, list(
@@ -680,10 +732,10 @@ safety_margin_full <- do.call(sim_trials, c(
 ))
 
 summarise_sims(list(
-  "effectiveness target" = eff_target_full$sims,
-  "effectiveness margin" = eff_margin_full$sims,
-  "safety target" = safety_target_full$sims,
-  "safety margin" = safety_margin_full$sims
+  "effectiveness target" = eff_target_full,
+  "effectiveness margin" = eff_margin_full,
+  "safety target" = safety_target_full,
+  "safety margin" = safety_margin_full
 ))
 ```
 
@@ -695,11 +747,19 @@ The SAP assessed whether operating characteristics were robust to several altern
 
 -   Varying the day-360 event probability implied by the effectiveness `hazard_control` vector over `c(0.40, 0.35, 0.30)`. These are failure probabilities and therefore correspond to the SAP's control success probabilities of 0.60, 0.65, and 0.70. The day-360 event probability implied by the safety `hazard_control` vector was varied over `c(0.06, 0.08, 0.10)`.
 -   Supplying a slower `lambda` schedule of `c(2, 5, 10, 10, 15, 15, 20, 25) / 30`, with `lambda_time = (1:7) * 30`, or a faster schedule of `c(5, 10, 20, 25, 30, 40, 50) / 30`, with `lambda_time = (1:6) * 30`. Division by 30 converts the SAP's subjects/month rates to the subjects/day scale used here.
--   Using the SAP's second effectiveness generator with `cutpoints = c(90, 100, 200, 300)` and both `hazard_treatment` and `hazard_control` set to `c(0.000055695, 0.010034797, 0.001690763, 0.000680535, 0.000573122)` in its equal-arm target scenario.
--   Using the SAP's third effectiveness generator with `cutpoints = c(90, 120)` and both hazard arguments set to `c(0.000569925, 0.007879626, 0.000596254)` in its equal-arm target scenario.
--   Using the SAP's second safety generator with `cutpoints = c(7, 180)` and both hazard arguments set to `c(0.007327613, 0.000122991, 0.0000600610)` in its equal-arm target scenario.
+-   Using the SAP's second effectiveness generator with `generation_cutpoints = c(90, 100, 200, 300)` and both `hazard_treatment` and `hazard_control` set to `c(0.000055695, 0.010034797, 0.001690763, 0.000680535, 0.000573122)` in its equal-arm target scenario.
+-   Using the SAP's third effectiveness generator with `generation_cutpoints = c(90, 120)` and both hazard arguments set to `c(0.000569925, 0.007879626, 0.000596254)` in its equal-arm target scenario.
+-   Using the SAP's second safety generator with `generation_cutpoints = c(7, 180)` and both hazard arguments set to `c(0.007327613, 0.000122991, 0.0000600610)` in its equal-arm target scenario.
 
-The three alternative event-time generators deliberately use data-generating partitions that differ from the principal analysis partitions. The current package accepts one `cutpoints` vector for both event generation and predictive imputation, so it cannot reproduce those model-misspecification sensitivities directly. The SAP also planned an imputation-model sensitivity with six pieces: day 90 followed by five post-90-day intervals containing approximately equal event counts, potentially with different cut-points by arm. A shared fixed package cut-point vector cannot reproduce that analysis either.
+The three alternative event-time models deliberately use data-generating
+partitions that differ from the principal analysis partitions. They can be
+represented by changing `generation_cutpoints` and the hazard vectors while
+retaining `cutpoints` and the priors for the principal predictive model. The
+SAP also planned an imputation-model sensitivity with six pieces: day 90
+followed by five post-90-day intervals containing approximately equal event
+counts, potentially with different cut-points by arm. `goldilocks` uses one
+analysis partition shared by both arms, so this arm-specific predictive model
+cannot currently be represented.
 
 The SAP supplies quantitative reference results based on 10,000 simulated trials per scenario and $M=5000$ predictive draws or imputations:
 
